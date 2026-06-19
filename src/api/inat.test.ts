@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchBirdPhoto } from './inat';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
