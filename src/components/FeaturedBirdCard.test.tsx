@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FeaturedBirdCard, FeaturedBirdCardProps } from './FeaturedBirdCard';
-import { EBirdObservation, EBirdTaxon } from '../api/ebird';
-import { BirdPhoto } from '../api/inat';
-import { XCRecording } from '../api/xeno-canto';
+import type { EBirdObservation, EBirdTaxon } from '../api/ebird';
+import type { BirdPhoto } from '../api/inat';
+import type { XCRecording } from '../api/xeno-canto';
 
 const obs: EBirdObservation = {
   speciesCode: 'snobun',
@@ -144,5 +144,10 @@ describe('FeaturedBirdCard', () => {
   it('displays photo attribution', () => {
     render(<FeaturedBirdCard {...defaults} />);
     expect(screen.getByText('(c) Test User, CC BY-NC')).toBeInTheDocument();
+  });
+
+  it('displays XC recordist name when recording is provided', () => {
+    render(<FeaturedBirdCard {...defaults} />);
+    expect(screen.getByText(/Jane Doe/)).toBeInTheDocument();
   });
 });
