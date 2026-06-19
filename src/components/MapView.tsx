@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import type { LatLng } from '../utils/geo';
 
 // Fix default marker icons broken by Vite's asset handling
 import markerIconUrl from 'leaflet/dist/images/marker-icon.png';
@@ -17,11 +18,6 @@ const defaultIcon = L.icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
 });
-
-export interface LatLng {
-  lat: number;
-  lng: number;
-}
 
 function PinHandler({ onPin }: { onPin: (pos: LatLng) => void }) {
   useMapEvents({
