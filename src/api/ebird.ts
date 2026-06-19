@@ -63,28 +63,46 @@ export async function fetchNearbyNotable(
   return res.json() as Promise<EBirdObservation[]>;
 }
 
-const TAXONOMY_KEY = `ebird-taxonomy-${new Date().getFullYear()}`;
+const taxonomyCache = new Map<string, EBirdTaxon | null>();
 
-function getTaxonomyCache(): Record<string, EBirdTaxon> {
+function getTaxonomyKey(): string {
+  return `ebird-taxonomy-${new Date().getFullYear()}`;
+}
+
+function getTaxonomyCache(): Map<string, EBirdTaxon | null> {
+  if (taxonomyCache.size > 0) return taxonomyCache;
   try {
-    return JSON.parse(localStorage.getItem(TAXONOMY_KEY) ?? '{}') as Record<string, EBirdTaxon>;
+    const stored = JSON.parse(localStorage.getItem(getTaxonomyKey()) ?? '{}') as Record<string, EBirdTaxon | null>;
+    for (const [k, v] of Object.entries(stored)) taxonomyCache.set(k, v);
   } catch {
-    return {};
+    // ignore corrupt cache
   }
+  return taxonomyCache;
+}
+
+// For testing: clear in-memory cache
+export function clearTaxonomyCache(): void {
+  taxonomyCache.clear();
 }
 
 export async function fetchTaxonomy(speciesCodes: string[]): Promise<EBirdTaxon[]> {
   const cache = getTaxonomyCache();
-  const missing = speciesCodes.filter(c => !(c in cache));
+  const missing = speciesCodes.filter(c => !cache.has(c));
 
   if (missing.length > 0) {
     const url = `${BASE_URL}/ref/taxonomy/ebird?fmt=json&species=${missing.join(',')}`;
     const res = await fetch(url, { headers: ebirdHeaders() });
     if (!res.ok) throw new Error(`eBird taxonomy error ${res.status}: ${await res.text()}`);
     const fetched = await res.json() as EBirdTaxon[];
-    for (const t of fetched) cache[t.speciesCode] = t;
-    localStorage.setItem(TAXONOMY_KEY, JSON.stringify(cache));
+    const fetchedMap = new Map(fetched.map(t => [t.speciesCode, t]));
+    for (const code of missing) {
+      cache.set(code, fetchedMap.get(code) ?? null);
+    }
+    // Persist: store as object (nulls included) so not-found codes are remembered
+    const toStore: Record<string, EBirdTaxon | null> = {};
+    for (const [k, v] of cache) toStore[k] = v;
+    localStorage.setItem(getTaxonomyKey(), JSON.stringify(toStore));
   }
 
-  return speciesCodes.map(c => cache[c]).filter(Boolean);
+  return speciesCodes.map(c => cache.get(c) ?? null).filter((t): t is EBirdTaxon => t !== null);
 }

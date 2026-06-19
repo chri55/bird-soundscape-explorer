@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchNearbyNotable, fetchTaxonomy } from './ebird';
+import { fetchNearbyNotable, fetchTaxonomy, clearTaxonomyCache } from './ebird';
 import type { EBirdTaxon } from './ebird';
 
 const mockFetch = vi.fn();
@@ -8,6 +8,7 @@ const mockFetch = vi.fn();
 beforeEach(() => {
   mockFetch.mockReset();
   localStorage.clear();
+  clearTaxonomyCache();
 });
 
 const mockNotableResponse: unknown[] = [
@@ -119,5 +120,19 @@ describe('fetchTaxonomy', () => {
     const result = await fetchTaxonomy(['snobun', 'amerob']);
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(result).toHaveLength(2);
+  });
+
+  it('does not re-fetch codes the API did not return', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [], // API returns nothing for 'unknown'
+    });
+
+    await fetchTaxonomy(['unknown']);
+    mockFetch.mockClear();
+
+    const result = await fetchTaxonomy(['unknown']);
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result).toHaveLength(0);
   });
 });
