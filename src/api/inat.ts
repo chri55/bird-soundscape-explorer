@@ -42,7 +42,7 @@ export async function fetchBirdPhoto(sciName: string): Promise<BirdPhoto | null>
     return null;
   }
 
-  const photo = data.results[0].default_photo!;
+  const photo = data.results[0].default_photo;
   const largeUrl = photo.medium_url.replace('/medium.', '/large.');
 
   const result: BirdPhoto = {
