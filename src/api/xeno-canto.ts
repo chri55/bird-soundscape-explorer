@@ -31,7 +31,9 @@ function apiKey(): string {
 }
 
 export async function fetchRecordings(query: string): Promise<XCResponse> {
-  const url = `${BASE_URL}?query=${encodeURIComponent(query)}&key=${apiKey()}`;
+  const key = apiKey();
+  const keyParam = key ? `&key=${key}` : '';
+  const url = `${BASE_URL}?query=${encodeURIComponent(query)}${keyParam}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Xeno-canto error ${res.status}: ${await res.text()}`);
   return res.json() as Promise<XCResponse>;
@@ -43,7 +45,7 @@ export async function fetchRecordingsByBox(
   lonMin: number, lonMax: number,
   month?: number,
 ): Promise<XCResponse> {
-  let query = `box:${latMin},${latMax},${lonMin},${lonMax}`;
-  if (month !== undefined) query += ` mon:${month}`;
+  let query = `box:${latMin},${lonMin},${latMax},${lonMax}`;
+  if (month !== undefined) query += ` month:${month}`;
   return fetchRecordings(query);
 }
