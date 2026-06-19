@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -85,6 +85,12 @@ export default function MapView() {
     },
     [fetchForPin],
   );
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col h-screen">
