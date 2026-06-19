@@ -45,7 +45,7 @@ export async function fetchRecentNearby(
   options: { maxResults?: number; dist?: number } = {},
 ): Promise<EBirdObservation[]> {
   const { maxResults = 50, dist = 25 } = options;
-  const url = `${BASE_URL}/data/obs/geo/recent?lat=${lat}&lng=${lng}&maxResults=${maxResults}&dist=${clampDist(dist)}&detail=full`;
+  const url = `${BASE_URL}/data/obs/geo/recent?lat=${lat}&lng=${lng}&maxResults=${maxResults}&dist=${clampDist(dist)}`;
   const res = await fetch(url, { headers: ebirdHeaders() });
   if (!res.ok) throw new Error(`eBird error ${res.status}: ${await res.text()}`);
   return res.json() as Promise<EBirdObservation[]>;
@@ -54,10 +54,10 @@ export async function fetchRecentNearby(
 export async function fetchNearbyNotable(
   lat: number,
   lng: number,
-  options: { dist?: number; back?: number; maxResults?: number } = {},
+  options: { dist?: number; maxResults?: number } = {},
 ): Promise<EBirdObservation[]> {
-  const { dist = 25, back = 14, maxResults = 50 } = options;
-  const url = `${BASE_URL}/data/obs/geo/recentnotable?lat=${lat}&lng=${lng}&dist=${clampDist(dist)}&back=${back}&maxResults=${maxResults}&detail=full`;
+  const { dist = 25, maxResults = 50 } = options;
+  const url = `${BASE_URL}/data/obs/geo/recent/notable?lat=${lat}&lng=${lng}&dist=${clampDist(dist)}&maxResults=${maxResults}`;
   const res = await fetch(url, { headers: ebirdHeaders() });
   if (!res.ok) throw new Error(`eBird error ${res.status}: ${await res.text()}`);
   return res.json() as Promise<EBirdObservation[]>;

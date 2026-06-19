@@ -58,9 +58,8 @@ describe('fetchNearbyNotable', () => {
     expect(result[0].locId).toBe('L109516');
 
     const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain('/data/obs/geo/recentnotable');
+    expect(url).toContain('/data/obs/geo/recent/notable');
     expect(url).toContain('lat=40.78');
-    expect(url).toContain('detail=full');
   });
 
   it('clamps dist to 50 km', async () => {
