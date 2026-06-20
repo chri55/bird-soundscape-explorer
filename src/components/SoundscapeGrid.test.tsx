@@ -17,6 +17,7 @@ function makeVoice(overrides: Partial<SoundscapeVoice> = {}): SoundscapeVoice {
     intervalMs: 5000,
     isActive: false,
     isLoading: false,
+    isFailed: false,
     photo: null,
     ...overrides,
   };
@@ -76,5 +77,21 @@ describe('SoundscapeGrid', () => {
     const { container } = render(<SoundscapeGrid voices={[makeVoice()]} />);
     const hoverCard = container.querySelector('.opacity-0, .invisible');
     expect(hoverCard).toBeTruthy();
+  });
+
+  it('does not render failed voices', () => {
+    const rec2: XCRecording = {
+      id: '2', gen: 'Parus', sp: 'major', en: 'Great Tit',
+      rec: 'Jane', cnt: 'US', loc: 'SF', lat: '37', lon: '-122',
+      type: 'song', q: 'A', file: 'https://xc.org/2.mp3', date: '2024-01-01',
+      'file-name': '2.mp3', sono: { small: 'https://xc.org/sono2.png', med: 'https://xc.org/sonom.png' },
+    };
+    const voices = [
+      makeVoice({ isFailed: true }),
+      makeVoice({ recording: rec2, sciName: 'Parus major', isFailed: false }),
+    ];
+    const { container } = render(<SoundscapeGrid voices={voices} />);
+    expect(container.textContent).not.toContain('American Robin');
+    expect(container.textContent).toContain('Great Tit');
   });
 });

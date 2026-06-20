@@ -3,7 +3,7 @@ import type { EBirdObservation } from '../api/ebird';
 import {
   selectVoices, computeIntervalMs,
   MIN_INTERVAL_MS, MAX_INTERVAL_MS, MAX_VOICES,
-  INITIAL_VOICES,
+  INITIAL_VOICES, SPARE_VOICES, MAX_AUDIO_RETRIES, RETRY_DELAY_MS,
   useSoundscape, INITIAL_STAGGER_MS,
 } from './useSoundscape';
 import { renderHook, act } from '@testing-library/react';
@@ -259,5 +259,75 @@ describe('useSoundscape — audio tuning', () => {
 
     act(() => { audioInstances[0].emit('canplay'); });
     expect(result.current.voices[0].isLoading).toBe(false);
+  });
+});
+
+describe('useSoundscape — XC retry + voice replacement', () => {
+  it('selectVoices respects explicit limit param', () => {
+    const recs = Array.from({ length: 10 }, (_, i) =>
+      makeRec({ gen: 'Sp', sp: String(i), id: String(i) }),
+    );
+    expect(selectVoices(recs, [], 5)).toHaveLength(5);
+  });
+
+  it('selectVoices returns all available when limit exceeds count', () => {
+    expect(selectVoices([makeRec()], [], 12)).toHaveLength(1);
+  });
+
+  it('retries audio.load() on error and voice stays active', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { audioInstances[0].emit('error'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS + 100); });
+
+    expect(audioInstances[0].load).toHaveBeenCalled();
+    expect(result.current.voices[0].isFailed).toBe(false);
+  });
+
+  it('marks voice isFailed after MAX_AUDIO_RETRIES when spare pool empty', async () => {
+    // xcRec1 only → no spare
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    // error → retry 1 → error → retry 2 → error → exhausted
+    act(() => { audioInstances[0].emit('error'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS + 100); });
+    act(() => { audioInstances[0].emit('error'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS + 100); });
+    act(() => { audioInstances[0].emit('error'); });
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    expect(result.current.voices[0].isFailed).toBe(true);
+  });
+
+  it('replaces failed voice in-place with spare from pool', async () => {
+    // Need 9 recordings: first MAX_VOICES=8 become active voices, 9th goes to spare pool.
+    // With only 2 recordings both land in active slots (slice(0,8) with 2 available = both),
+    // leaving the spare pool empty — so we need at least MAX_VOICES+1 recordings here.
+    const recs = Array.from({ length: 9 }, (_, i) =>
+      makeRec({ gen: 'Sp', sp: String(i), id: String(i) }),
+    );
+    const obsList = Array.from({ length: 9 }, (_, i) =>
+      makeObs(`Sp ${i}`, 10 - i),  // howMany: 10,9,8,...,2 (descending so sort is predictable)
+    );
+    const { result } = renderHook(() => useSoundscape(recs, obsList));
+    await act(async () => { await vi.runAllTimersAsync(); });
+    expect(result.current.voices).toHaveLength(8); // MAX_VOICES active
+
+    const originalName = result.current.voices[0].sciName; // highest howMany = 'Sp 0'
+
+    // exhaust retries on voice 0
+    act(() => { audioInstances[0].emit('error'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS + 100); });
+    act(() => { audioInstances[0].emit('error'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS + 100); });
+    act(() => { audioInstances[0].emit('error'); });
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    // voice at same index 0 replaced with the spare (not removed from array)
+    expect(result.current.voices[0].sciName).not.toBe(originalName);
+    expect(result.current.voices[0].isFailed).toBe(false);
+    expect(result.current.voices).toHaveLength(8); // length unchanged
   });
 });

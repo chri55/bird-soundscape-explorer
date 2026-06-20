@@ -10,7 +10,7 @@ export function SoundscapeGrid({ voices }: SoundscapeGridProps) {
 
   return (
     <div className="grid grid-cols-8 gap-2 p-1 w-full">
-      {voices.map(voice => (
+      {voices.filter(v => !v.isFailed).map(voice => (
         <div
           key={voice.recording.id}
           className={`relative group rounded-lg ring-2 transition-all duration-300 ${
