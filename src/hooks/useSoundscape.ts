@@ -10,6 +10,9 @@ export const JITTER_FACTOR = 0.25;
 export const MAX_VOICES = 8;
 export const INITIAL_STAGGER_MS = 3_000;
 export const INITIAL_VOICES = 3;
+export const SPARE_VOICES = 4;
+export const MAX_AUDIO_RETRIES = 2;
+export const RETRY_DELAY_MS = 1_000;
 
 export interface SoundscapeVoice {
   recording: XCRecording;
@@ -18,6 +21,7 @@ export interface SoundscapeVoice {
   intervalMs: number;
   isActive: boolean;
   isLoading: boolean;
+  isFailed: boolean;
   photo: BirdPhoto | null;
 }
 
@@ -33,6 +37,7 @@ const typeScore = (type: string) => (type.toLowerCase().includes('song') ? 0 : 1
 export function selectVoices(
   recordings: XCRecording[],
   recentObs: EBirdObservation[],
+  limit = MAX_VOICES,
 ): { recording: XCRecording; sciName: string; howMany: number }[] {
   const howManyMap = new Map<string, number>(
     recentObs.map(obs => [obs.sciName, obs.howMany ?? 1]),
@@ -58,7 +63,7 @@ export function selectVoices(
       howMany: howManyMap.get(sciName) ?? 1,
     }))
     .sort((a, b) => b.howMany - a.howMany)
-    .slice(0, MAX_VOICES);
+    .slice(0, limit);
 }
 
 export function computeIntervalMs(
@@ -89,6 +94,8 @@ export function useSoundscape(
   const timersRef    = useRef<ReturnType<typeof setTimeout>[]>([]);
   const intervalsRef = useRef<number[]>([]);
   const isPlayingRef = useRef(false);
+  const sparePoolRef = useRef<{ recording: XCRecording; sciName: string; howMany: number }[]>([]);
+  const retryCountsRef = useRef<number[]>([]);
 
   const stopAll = useCallback(() => {
     timersRef.current.forEach(t => clearTimeout(t));
@@ -124,7 +131,11 @@ export function useSoundscape(
     stopAll();
     let cancelled = false;
 
-    const selected = selectVoices(recordings, recentObs);
+    const allCandidates = selectVoices(recordings, recentObs, MAX_VOICES + SPARE_VOICES);
+    const selected = allCandidates.slice(0, MAX_VOICES);
+    sparePoolRef.current = allCandidates.slice(MAX_VOICES);
+    retryCountsRef.current = selected.map(() => 0);
+
     if (selected.length === 0) {
       setVoices([]);
       audioRefs.current = [];
@@ -148,15 +159,85 @@ export function useSoundscape(
         intervalMs: intervals[i],
         isActive: false,
         isLoading: true,
+        isFailed: false,
         photo: null,
       })),
     );
 
-    // Flip isLoading false when audio is ready to play
-    audioRefs.current.forEach((audio, idx) => {
+    // replaceFailedVoice and attachAudioListeners are mutually recursive function
+    // declarations — both hoisted to the top of this arrow-function scope, so each
+    // can reference the other regardless of source order.
+
+    function replaceFailedVoice(idx: number) {
+      const a = audioRefs.current[idx];
+      if (a) { a.src = ''; a.load(); }
+
+      const spare = sparePoolRef.current.shift();
+      if (!spare) {
+        setVoices(v => v.map((voice, vi) => vi === idx ? { ...voice, isFailed: true } : voice));
+        return;
+      }
+
+      const newAudio = new Audio(spare.recording.file);
+      audioRefs.current[idx] = newAudio;
+      retryCountsRef.current[idx] = 0;
+      intervalsRef.current[idx] = MAX_INTERVAL_MS;
+
+      setVoices(v => v.map((voice, vi) => vi === idx ? {
+        recording: spare.recording,
+        sciName: spare.sciName,
+        howMany: spare.howMany,
+        intervalMs: MAX_INTERVAL_MS,
+        isActive: false,
+        isLoading: true,
+        isFailed: false,
+        photo: null,
+      } : voice));
+
+      attachAudioListeners(newAudio, idx);
+
+      void fetchBirdPhoto(spare.sciName).catch(() => null).then(photo => {
+        if (!cancelled) {
+          setVoices(v => v.map((voice, vi) =>
+            vi === idx ? { ...voice, photo: photo ?? null } : voice,
+          ));
+        }
+      });
+
+      if (isPlayingRef.current) {
+        timersRef.current.push(
+          setTimeout(() => startVoice(idx), Math.random() * INITIAL_STAGGER_MS),
+        );
+      }
+    }
+
+    function attachAudioListeners(audio: HTMLAudioElement, idx: number) {
       audio.addEventListener('canplay', () => {
+        if (cancelled) return;
         setVoices(v => v.map((voice, vi) => vi === idx ? { ...voice, isLoading: false } : voice));
       }, { once: true } as AddEventListenerOptions);
+
+      audio.addEventListener('error', () => {
+        if (cancelled) return;
+        const retries = retryCountsRef.current[idx] ?? 0;
+        if (retries < MAX_AUDIO_RETRIES) {
+          retryCountsRef.current[idx] = retries + 1;
+          setTimeout(() => {
+            if (cancelled) return;
+            const a = audioRefs.current[idx];
+            if (!a) return;
+            a.src = a.src;
+            a.load();
+            attachAudioListeners(a, idx);
+          }, RETRY_DELAY_MS);
+        } else {
+          replaceFailedVoice(idx);
+        }
+      }, { once: true } as AddEventListenerOptions);
+    }
+
+    audioRefs.current.forEach((audio, idx) => {
+      attachAudioListeners(audio, idx);
     });
 
     void Promise.all(
