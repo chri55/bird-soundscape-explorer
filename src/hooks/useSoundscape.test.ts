@@ -373,4 +373,70 @@ describe('useSoundscape — XC retry + voice replacement', () => {
     expect(result.current.voices[0].isFailed).toBe(false);
     expect(result.current.voices).toHaveLength(8); // length unchanged
   });
+
+  it('pause does not clear audio src (no error events triggered)', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); }); // play
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    act(() => { result.current.toggle(); }); // pause
+
+    expect(audioInstances[0].src).not.toBe('');
+    expect(audioInstances[0].load).not.toHaveBeenCalled();
+  });
+
+  it('pause preserves the voices array unchanged', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1, xcRec2], [obs1, obs2]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    const sciNamesBefore = result.current.voices.map(v => v.sciName);
+
+    act(() => { result.current.toggle(); }); // play
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+    act(() => { result.current.toggle(); }); // pause
+
+    expect(result.current.voices.map(v => v.sciName)).toEqual(sciNamesBefore);
+    expect(result.current.voices).toHaveLength(2);
+  });
+
+  it('resume after pause plays audio without adding duplicate ended listeners', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); }); // play
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+    // audio is now playing
+
+    act(() => { result.current.toggle(); }); // pause
+
+    act(() => { result.current.toggle(); }); // resume
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    // fire ended once — should schedule exactly one next play timer
+    const timerCountBefore = vi.getTimerCount();
+    act(() => { audioInstances[0].emit('ended'); });
+    // only one new timer should have been scheduled
+    expect(vi.getTimerCount()).toBe(timerCountBefore + 1);
+  });
+
+  it('multiple pause/resume cycles do not accumulate ended listeners', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    // 3 full pause/resume cycles
+    for (let cycle = 0; cycle < 3; cycle++) {
+      act(() => { result.current.toggle(); }); // play
+      await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+      act(() => { result.current.toggle(); }); // pause
+    }
+
+    act(() => { result.current.toggle(); }); // final play
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    const timerCountBefore = vi.getTimerCount();
+    act(() => { audioInstances[0].emit('ended'); });
+    expect(vi.getTimerCount()).toBe(timerCountBefore + 1); // still only one timer
+  });
 });
