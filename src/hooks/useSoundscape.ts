@@ -98,11 +98,21 @@ export function useSoundscape(
   const isPlayingRef = useRef(false);
   const sparePoolRef = useRef<{ recording: XCRecording; sciName: string; howMany: number }[]>([]);
   const retryCountsRef = useRef<number[]>([]);
+  const pendingEndedRef = useRef<boolean[]>([]);
 
   const stopAll = useCallback(() => {
     timersRef.current.forEach(t => clearTimeout(t));
     timersRef.current = [];
     audioRefs.current.forEach(a => { a.pause(); a.currentTime = 0; a.src = ''; a.load(); });
+    isPlayingRef.current = false;
+    setIsPlaying(false);
+    setVoices(v => v.map(voice => ({ ...voice, isActive: false })));
+  }, []);
+
+  const pauseAll = useCallback(() => {
+    timersRef.current.forEach(t => clearTimeout(t));
+    timersRef.current = [];
+    audioRefs.current.forEach(a => { a.pause(); a.currentTime = 0; });
     isPlayingRef.current = false;
     setIsPlaying(false);
     setVoices(v => v.map(voice => ({ ...voice, isActive: false })));
@@ -115,12 +125,16 @@ export function useSoundscape(
     void audio.play();
     setVoices(v => v.map((voice, i) => i === index ? { ...voice, isActive: true } : voice));
 
-    audio.addEventListener('ended', () => {
-      setVoices(v => v.map((voice, i) => i === index ? { ...voice, isActive: false } : voice));
-      if (!isPlayingRef.current) return;
-      const delay = applyJitter(intervalsRef.current[index] ?? MAX_INTERVAL_MS);
-      timersRef.current.push(setTimeout(() => startVoice(index), delay));
-    }, { once: true } as AddEventListenerOptions);
+    if (!pendingEndedRef.current[index]) {
+      pendingEndedRef.current[index] = true;
+      audio.addEventListener('ended', () => {
+        pendingEndedRef.current[index] = false;
+        setVoices(v => v.map((voice, i) => i === index ? { ...voice, isActive: false } : voice));
+        if (!isPlayingRef.current) return;
+        const delay = applyJitter(intervalsRef.current[index] ?? MAX_INTERVAL_MS);
+        timersRef.current.push(setTimeout(() => startVoice(index), delay));
+      }, { once: true } as AddEventListenerOptions);
+    }
   }, []);
 
   // Stable keys derived from content so the effect doesn't re-fire on every render
@@ -131,6 +145,7 @@ export function useSoundscape(
   // Rebuild when source data changes
   useEffect(() => {
     stopAll();
+    pendingEndedRef.current = [];
     let cancelled = false;
 
     const allCandidates = selectVoices(recordings, recentObs, MAX_VOICES + SPARE_VOICES);
@@ -184,6 +199,7 @@ export function useSoundscape(
       audioRefs.current[idx] = newAudio;
       retryCountsRef.current[idx] = 0;
       intervalsRef.current[idx] = MAX_INTERVAL_MS;
+      pendingEndedRef.current[idx] = false;
 
       setVoices(v => v.map((voice, vi) => vi === idx ? {
         recording: spare.recording,
@@ -259,7 +275,7 @@ export function useSoundscape(
 
   const toggle = useCallback(() => {
     if (isPlayingRef.current) {
-      stopAll();
+      pauseAll();
     } else {
       isPlayingRef.current = true;
       setIsPlaying(true);
@@ -272,7 +288,7 @@ export function useSoundscape(
         timersRef.current.push(setTimeout(() => startVoice(i), delay));
       });
     }
-  }, [stopAll, startVoice]);
+  }, [pauseAll, startVoice]);
 
   // Cleanup on unmount
   useEffect(() => {
