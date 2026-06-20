@@ -109,8 +109,7 @@ export default function MapView() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Map wrapper: relative so SoundscapeGrid can position inside it */}
-        <div className="relative flex-1">
+        <div className="flex-1">
           <MapContainer center={[20, 0]} zoom={3} className="w-full h-full cursor-crosshair">
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -119,7 +118,6 @@ export default function MapView() {
             <PinHandler onPin={handlePin} />
             {pin && <Marker position={[pin.lat, pin.lng]} icon={defaultIcon} />}
           </MapContainer>
-          <SoundscapeGrid voices={soundscape.voices} />
         </div>
 
         {featured.observation && (
@@ -136,11 +134,16 @@ export default function MapView() {
         )}
       </div>
 
-      <SoundscapeControls
-        isPlaying={soundscape.isPlaying}
-        voiceCount={soundscape.voices.length}
-        onToggle={soundscape.toggle}
-      />
+      {soundscape.voices.length > 0 && (
+        <div className="shrink-0 bg-gray-900 flex items-center gap-3 px-3 py-2">
+          <SoundscapeControls
+            isPlaying={soundscape.isPlaying}
+            voiceCount={soundscape.voices.length}
+            onToggle={soundscape.toggle}
+          />
+          <SoundscapeGrid voices={soundscape.voices} />
+        </div>
+      )}
     </div>
   );
 }
