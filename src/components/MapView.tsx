@@ -13,7 +13,8 @@ import type { EBirdObservation } from '../api/ebird';
 import { fetchRecentNearby, fetchNearbyNotable } from '../api/ebird';
 import type { XCRecording } from '../api/xeno-canto';
 import { fetchRecordingsByBox } from '../api/xeno-canto';
-import { useSoundscape } from '../hooks/useSoundscape';
+import { fillRecordingGaps } from '../utils/soundscape-recordings';
+import { useSoundscape, MAX_VOICES, SPARE_VOICES } from '../hooks/useSoundscape';
 import { SpeciesPanel } from './SpeciesPanel';
 import { SoundscapeGrid } from './SoundscapeGrid';
 import { SoundscapeControls } from './SoundscapeControls';
@@ -73,7 +74,7 @@ export default function MapView() {
       ]);
       setNotableObs(notable);
       setRecentObs(recent);
-      setRecordings(xcRes.recordings);
+      setRecordings(await fillRecordingGaps(xcRes.recordings, recent, MAX_VOICES + SPARE_VOICES));
     } finally {
       setIsLoading(false);
     }
