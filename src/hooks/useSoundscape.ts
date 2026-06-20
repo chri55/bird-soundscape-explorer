@@ -10,6 +10,8 @@ export const JITTER_FACTOR = 0.25;
 export const MAX_VOICES = 8;
 export const INITIAL_STAGGER_MS = 3_000;
 export const INITIAL_VOICES = 3;
+export const SECONDARY_STAGGER_MIN_MS = 1_000;
+export const SECONDARY_STAGGER_MAX_MS = 6_000;
 export const SPARE_VOICES = 4;
 export const MAX_AUDIO_RETRIES = 2;
 export const RETRY_DELAY_MS = 1_000;
@@ -264,7 +266,9 @@ export function useSoundscape(
       audioRefs.current.forEach((_, i) => {
         const delay = i < INITIAL_VOICES
           ? Math.random() * INITIAL_STAGGER_MS
-          : (intervalsRef.current[i] ?? MAX_INTERVAL_MS);
+          : INITIAL_STAGGER_MS
+            + SECONDARY_STAGGER_MIN_MS
+            + Math.random() * (SECONDARY_STAGGER_MAX_MS - SECONDARY_STAGGER_MIN_MS);
         timersRef.current.push(setTimeout(() => startVoice(i), delay));
       });
     }
