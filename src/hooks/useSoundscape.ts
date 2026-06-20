@@ -64,10 +64,11 @@ export function computeIntervalMs(
   minHowMany: number,
   maxHowMany: number,
 ): number {
-  const ratio =
+  const rawRatio =
     maxHowMany === minHowMany
       ? 0.5
       : (howMany - minHowMany) / (maxHowMany - minHowMany);
+  const ratio = Math.max(0, Math.min(1, rawRatio));
   return MAX_INTERVAL_MS - ratio * (MAX_INTERVAL_MS - MIN_INTERVAL_MS);
 }
 
@@ -90,7 +91,7 @@ export function useSoundscape(
   const stopAll = useCallback(() => {
     timersRef.current.forEach(t => clearTimeout(t));
     timersRef.current = [];
-    audioRefs.current.forEach(a => { a.pause(); a.currentTime = 0; });
+    audioRefs.current.forEach(a => { a.pause(); a.currentTime = 0; a.src = ''; a.load(); });
     isPlayingRef.current = false;
     setIsPlaying(false);
     setVoices(v => v.map(voice => ({ ...voice, isActive: false })));
@@ -119,13 +120,14 @@ export function useSoundscape(
   // Rebuild when source data changes
   useEffect(() => {
     stopAll();
+    let cancelled = false;
 
     const selected = selectVoices(recordings, recentObs);
     if (selected.length === 0) {
       setVoices([]);
       audioRefs.current = [];
       intervalsRef.current = [];
-      return;
+      return () => { cancelled = true; };
     }
 
     const howManys = selected.map(s => s.howMany);
@@ -150,8 +152,11 @@ export function useSoundscape(
     void Promise.all(
       selected.map(s => fetchBirdPhoto(s.sciName).catch(() => null)),
     ).then(photos => {
+      if (cancelled) return;
       setVoices(v => v.map((voice, i) => ({ ...voice, photo: photos[i] ?? null })));
     });
+
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordingsKey, recentObsKey, stopAll]);
 
