@@ -59,8 +59,8 @@ describe('fillRecordingGaps', () => {
     ];
     await fillRecordingGaps(existing, recentObs, 3);
     expect(fetchRecordings).toHaveBeenCalledTimes(2);
-    expect(fetchRecordings).toHaveBeenNthCalledWith(1, 'Corvus brachyrhynchos');
-    expect(fetchRecordings).toHaveBeenNthCalledWith(2, 'Parus major');
+    expect(fetchRecordings).toHaveBeenNthCalledWith(1, 'gen:Corvus sp:brachyrhynchos');
+    expect(fetchRecordings).toHaveBeenNthCalledWith(2, 'gen:Parus sp:major');
   });
 
   it('merges gap recordings into the returned array after existing', async () => {
@@ -90,6 +90,6 @@ describe('fillRecordingGaps', () => {
     ];
     await fillRecordingGaps(existing, recentObs, 2);
     expect(fetchRecordings).toHaveBeenCalledTimes(1);
-    expect(fetchRecordings).toHaveBeenCalledWith('Parus major');
+    expect(fetchRecordings).toHaveBeenCalledWith('gen:Parus sp:major');
   });
 });
