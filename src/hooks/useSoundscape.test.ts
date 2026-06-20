@@ -3,7 +3,12 @@ import type { EBirdObservation } from '../api/ebird';
 import {
   selectVoices, computeIntervalMs,
   MIN_INTERVAL_MS, MAX_INTERVAL_MS, MAX_VOICES,
+  useSoundscape, INITIAL_STAGGER_MS,
 } from './useSoundscape';
+import { renderHook, act } from '@testing-library/react';
+import { fetchBirdPhoto } from '../api/inat';
+
+vi.mock('../api/inat', () => ({ fetchBirdPhoto: vi.fn().mockResolvedValue(null) }));
 
 function makeRec(overrides: Partial<XCRecording> = {}): XCRecording {
   return {
@@ -79,5 +84,123 @@ describe('computeIntervalMs', () => {
   it('returns midpoint when all howMany are equal', () => {
     const mid = (MIN_INTERVAL_MS + MAX_INTERVAL_MS) / 2;
     expect(computeIntervalMs(5, 5, 5)).toBe(mid);
+  });
+});
+
+// ── MockAudio ──────────────────────────────────────────────────────────────
+class MockAudio {
+  src: string;
+  currentTime = 0;
+  private _handlers: Record<string, Array<() => void>> = {};
+  play = vi.fn().mockResolvedValue(undefined);
+  pause = vi.fn();
+  constructor(src: string) { this.src = src; }
+  addEventListener(event: string, handler: () => void) {
+    (this._handlers[event] ??= []).push(handler);
+  }
+  removeEventListener(event: string, handler: () => void) {
+    this._handlers[event] = (this._handlers[event] ?? []).filter(h => h !== handler);
+  }
+  // Test helper: fire the event and clear one-shot ended handlers
+  emit(event: string) {
+    const handlers = [...(this._handlers[event] ?? [])];
+    if (event === 'ended') this._handlers['ended'] = [];
+    handlers.forEach(h => h());
+  }
+}
+
+const audioInstances: MockAudio[] = [];
+
+beforeEach(() => {
+  audioInstances.length = 0;
+  vi.stubGlobal('Audio', class extends MockAudio {
+    constructor(src: string) { super(src); audioInstances.push(this); }
+  });
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
+
+// ── Fixtures ───────────────────────────────────────────────────────────────
+const xcRec1 = makeRec({ gen: 'Turdus', sp: 'migratorius', id: '1' });
+const xcRec2 = makeRec({ gen: 'Parus', sp: 'major', id: '2' });
+const obs1   = makeObs('Turdus migratorius', 10);
+const obs2   = makeObs('Parus major', 2);
+
+// ── Tests ──────────────────────────────────────────────────────────────────
+describe('useSoundscape', () => {
+  it('starts with isPlaying=false and voices populated from recordings', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1, xcRec2], [obs1, obs2]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+    expect(result.current.isPlaying).toBe(false);
+    expect(result.current.voices).toHaveLength(2);
+  });
+
+  it('toggle() starts playback and plays audio after stagger', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); });
+    expect(result.current.isPlaying).toBe(true);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+    expect(audioInstances[0].play).toHaveBeenCalled();
+  });
+
+  it('sets isActive=true on play and false on ended', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+    expect(result.current.voices[0].isActive).toBe(true);
+
+    act(() => { audioInstances[0].emit('ended'); });
+    expect(result.current.voices[0].isActive).toBe(false);
+  });
+
+  it('toggle() stop pauses audio and clears isActive', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); }); // play
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    act(() => { result.current.toggle(); }); // stop
+    expect(result.current.isPlaying).toBe(false);
+    expect(audioInstances[0].pause).toHaveBeenCalled();
+    expect(result.current.voices[0].isActive).toBe(false);
+  });
+
+  it('rebuilds voices and stops when recordings change', async () => {
+    const { result, rerender } = renderHook(
+      ({ recs, obs }: { recs: typeof xcRec1[]; obs: typeof obs1[] }) =>
+        useSoundscape(recs, obs),
+      { initialProps: { recs: [xcRec1], obs: [obs1] } },
+    );
+    await act(async () => { await vi.runAllTimersAsync(); });
+    act(() => { result.current.toggle(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    rerender({ recs: [xcRec2], obs: [obs2] });
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    expect(result.current.isPlaying).toBe(false);
+    expect(result.current.voices[0].sciName).toBe('Parus major');
+  });
+
+  it('fetches a photo for each voice and stores it', async () => {
+    vi.mocked(fetchBirdPhoto).mockResolvedValue({
+      photoUrl: 'https://img.jpg', largeUrl: 'https://img-l.jpg',
+      attribution: '© test', licenseCode: 'cc-by',
+    });
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+    expect(fetchBirdPhoto).toHaveBeenCalledWith('Turdus migratorius');
+    expect(result.current.voices[0].photo).not.toBeNull();
   });
 });
