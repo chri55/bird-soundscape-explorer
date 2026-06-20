@@ -20,9 +20,7 @@ export function SpeciesListRow({ obs, isNotable, onClick }: SpeciesListRowProps)
     >
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-gray-900 text-sm truncate">{obs.comName}</p>
-        {obs.sciName !== obs.comName && (
-          <p className="italic text-gray-500 text-xs truncate">{obs.sciName}</p>
-        )}
+        <p className="italic text-gray-500 text-xs truncate">{obs.sciName}</p>
         <p className="text-gray-400 text-xs truncate mt-0.5">{dateStr} · {obs.locName}</p>
       </div>
       <div className="flex flex-col items-end gap-1 shrink-0">

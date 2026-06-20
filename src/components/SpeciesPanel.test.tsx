@@ -10,9 +10,9 @@ vi.mock('../api/ebird', () => ({
   clearTaxonomyCache: vi.fn(),
 }));
 
-function makeObs(sciName: string, howMany: number, locName = 'SF'): EBirdObservation {
+function makeObs(comName: string, howMany: number, locName = 'SF'): EBirdObservation {
   return {
-    speciesCode: sciName.replace(' ', ''), comName: sciName, sciName,
+    speciesCode: comName.replace(' ', ''), comName, sciName: comName.toLowerCase().replace(' ', '.'),
     locName, obsDt: '2024-06-15 08:00', howMany,
     lat: 37.77, lng: -122.4, obsValid: true, obsReviewed: false, locationPrivate: false,
   };
