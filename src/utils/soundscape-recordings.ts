@@ -17,7 +17,10 @@ export async function fillRecordingGaps(
     .slice(0, needed);
 
   const results = await Promise.all(
-    gapSpecies.map(obs => fetchRecordings(obs.sciName).catch(() => null)),
+    gapSpecies.map(obs => {
+      const [gen, ...rest] = obs.sciName.split(' ');
+      return fetchRecordings(`gen:${gen} sp:${rest.join(' ')}`).catch(() => null);
+    }),
   );
 
   const gapRecordings = results
