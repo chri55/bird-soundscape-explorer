@@ -100,7 +100,7 @@ export function SpeciesDetail({ obs, recordings, onBack }: SpeciesDetailProps): 
 
           {/* Photo attribution */}
           {photo && (
-            <div className="mt-auto px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
+            <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
               <p>{photo.attribution}</p>
             </div>
           )}
