@@ -8,7 +8,7 @@ export function SoundscapeGrid({ voices }: SoundscapeGridProps) {
   if (voices.length === 0) return null;
 
   return (
-    <div className="absolute bottom-0 left-0 z-20 p-2 flex gap-2">
+    <div className="absolute top-0 left-0 z-20 p-2 flex gap-2">
       {voices.map(voice => {
         const imgSrc = voice.photo?.photoUrl ?? voice.recording.sono.small;
         return (
