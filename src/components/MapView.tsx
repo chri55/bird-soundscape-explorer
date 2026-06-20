@@ -13,9 +13,8 @@ import type { EBirdObservation } from '../api/ebird';
 import { fetchRecentNearby, fetchNearbyNotable } from '../api/ebird';
 import type { XCRecording } from '../api/xeno-canto';
 import { fetchRecordingsByBox } from '../api/xeno-canto';
-import { useFeaturedBird } from '../hooks/useFeaturedBird';
 import { useSoundscape } from '../hooks/useSoundscape';
-import { FeaturedBirdCard } from './FeaturedBirdCard';
+import { SpeciesPanel } from './SpeciesPanel';
 import { SoundscapeGrid } from './SoundscapeGrid';
 import { SoundscapeControls } from './SoundscapeControls';
 
@@ -31,7 +30,7 @@ const defaultIcon = L.icon({
 
 const FETCH_RADIUS_KM = 10;
 const DEBOUNCE_MS = 500;
-const XC_BOX_DEG = 0.225; // ~25km box around pin
+const XC_BOX_DEG = 0.225;
 
 function PinHandler({ onPin }: { onPin: (pos: LatLng) => void }) {
   useMapEvents({
@@ -47,15 +46,10 @@ export default function MapView() {
   const [notableObs, setNotableObs] = useState<EBirdObservation[]>([]);
   const [recentObs, setRecentObs] = useState<EBirdObservation[]>([]);
   const [recordings, setRecordings] = useState<XCRecording[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const lastFetchRef = useRef<LatLng | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const featured = useFeaturedBird({
-    notableObservations: notableObs,
-    recentObservations: recentObs,
-    recordings,
-  });
 
   const soundscape = useSoundscape(recordings, recentObs);
 
@@ -63,23 +57,26 @@ export default function MapView() {
     if (lastFetchRef.current && haversineKm(pos, lastFetchRef.current) < FETCH_RADIUS_KM) return;
     lastFetchRef.current = pos;
 
+    setIsLoading(true);
     const month = new Date().getMonth() + 1;
-
-    const [notable, recent, xcRes] = await Promise.all([
-      fetchNearbyNotable(pos.lat, pos.lng),
-      fetchRecentNearby(pos.lat, pos.lng),
-      fetchRecordingsByBox(
-        pos.lat - XC_BOX_DEG,
-        pos.lat + XC_BOX_DEG,
-        pos.lng - XC_BOX_DEG,
-        pos.lng + XC_BOX_DEG,
-        month,
-      ),
-    ]);
-
-    setNotableObs(notable);
-    setRecentObs(recent);
-    setRecordings(xcRes.recordings);
+    try {
+      const [notable, recent, xcRes] = await Promise.all([
+        fetchNearbyNotable(pos.lat, pos.lng),
+        fetchRecentNearby(pos.lat, pos.lng),
+        fetchRecordingsByBox(
+          pos.lat - XC_BOX_DEG,
+          pos.lat + XC_BOX_DEG,
+          pos.lng - XC_BOX_DEG,
+          pos.lng + XC_BOX_DEG,
+          month,
+        ),
+      ]);
+      setNotableObs(notable);
+      setRecentObs(recent);
+      setRecordings(xcRes.recordings);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const handlePin = useCallback(
@@ -120,28 +117,24 @@ export default function MapView() {
           </MapContainer>
         </div>
 
-        {featured.observation && (
-          <FeaturedBirdCard
-            observation={featured.observation}
-            taxon={featured.taxon}
-            photo={featured.photo}
-            recording={featured.recording}
-            isNotable={featured.isNotable}
-            mode={featured.mode}
-            onToggleMode={featured.onToggleMode}
-            showToggle={featured.showToggle}
-          />
-        )}
+        <SpeciesPanel
+          notableObs={notableObs}
+          recentObs={recentObs}
+          recordings={recordings}
+          isLoading={isLoading}
+        />
       </div>
 
       {soundscape.voices.length > 0 && (
-        <div className="shrink-0 bg-gray-900 flex items-center gap-3 px-3 py-2">
+        <div className="shrink-0 bg-gray-900 flex items-center gap-2 px-3 py-2">
           <SoundscapeControls
             isPlaying={soundscape.isPlaying}
             voiceCount={soundscape.voices.length}
             onToggle={soundscape.toggle}
           />
-          <SoundscapeGrid voices={soundscape.voices} />
+          <div className="flex-1 min-w-0">
+            <SoundscapeGrid voices={soundscape.voices} />
+          </div>
         </div>
       )}
     </div>
