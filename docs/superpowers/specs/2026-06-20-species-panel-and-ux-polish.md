@@ -1,18 +1,19 @@
 # Spec: Species Panel, UX Polish, and Soundscape Hover Card
 
 **Date:** 2026-06-20
-**Scope:** Replace single-bird featured card with a full species list panel; add hover cards to soundscape strip; add loading skeletons throughout; fix ORB-blocked sonogram images; make soundscape strip an 8-column grid.
+**Scope:** Replace single-bird featured card with a full species list panel; add hover cards to soundscape strip; add loading skeletons throughout; fix ORB-blocked sonogram images; make soundscape strip an 8-column grid; tune audio playback frequency and startup behavior.
 
 ---
 
 ## Summary
 
-Four improvements delivered together:
+Five improvements delivered together:
 
 1. **Sonogram fix** — Remove all `<img src={sono...}>` references. Use a styled text placeholder when no iNaturalist photo is available.
 2. **Species Panel** — Replace `FeaturedBirdCard` / `useFeaturedBird` with a new panel showing scrollable Rarest and Most Common lists, clickable into a detail view.
 3. **Loading skeletons** — Pulsing placeholders everywhere data is in-flight: panel rows, photos, audio cards.
 4. **Soundscape grid + hover card** — 8-column grid fills available width; each card shows a hover popover with full photo, names, and attributions.
+5. **Audio tuning** — More frequent playback; staggered startup with only 3 voices triggering immediately.
 
 ---
 
@@ -28,7 +29,7 @@ Four improvements delivered together:
 | `src/components/SpeciesListRow.tsx` | **Create** — one row in the list |
 | `src/components/SpeciesDetail.tsx` | **Create** — detail view with back button |
 | `src/components/SoundscapeGrid.tsx` | **Modify** — grid-cols-8, hover card, loading state, no sonogram |
-| `src/hooks/useSoundscape.ts` | **Modify** — per-voice `isLoading` state |
+| `src/hooks/useSoundscape.ts` | **Modify** — per-voice `isLoading` state; updated constants; staggered startup |
 | `src/components/MapView.tsx` | **Modify** — swap FeaturedBirdCard for SpeciesPanel |
 | `src/components/FeaturedBirdCard.tsx` | **Delete** |
 | `src/hooks/useFeaturedBird.ts` | **Delete** |
@@ -183,7 +184,30 @@ Each card gets `group relative` on its outer wrapper. On hover (`group-hover:vis
 
 ---
 
-## 5. `useSoundscape` — per-voice `isLoading`
+## 5. `useSoundscape` — audio tuning + per-voice `isLoading`
+
+### Updated constants
+
+Replace the existing values in `src/hooks/useSoundscape.ts`:
+
+```typescript
+export const MIN_INTERVAL_MS = 3_000;   // was 5_000 — most common birds play more frequently
+export const MAX_INTERVAL_MS = 30_000;  // was 90_000 — rarest birds still cycle, just not after 90s gaps
+export const INITIAL_VOICES = 3;        // new — how many voices trigger immediately at play start
+```
+
+`JITTER_FACTOR`, `MAX_VOICES`, and `INITIAL_STAGGER_MS` are unchanged.
+
+### Staggered startup behavior
+
+Voices in `useSoundscape` are already sorted most-common-first by `selectVoices`. On `toggle()` to play:
+
+- **Voices 0 – (INITIAL_VOICES-1)** (the 3 most common): schedule with a random stagger in `[0, INITIAL_STAGGER_MS]`, exactly as before.
+- **Voices INITIAL_VOICES – (MAX_VOICES-1)** (remaining up to 5): schedule with their computed `intervalMs` as the initial delay (i.e., they wait one full interval before their first play, then cycle normally via the `ended` handler).
+
+This means the soundscape opens with 3 birds calling within the first 3 seconds, and the remaining voices drift in naturally over the next 3–30 seconds based on their rarity.
+
+### Per-voice `isLoading`
 
 Add `isLoading: boolean` to `SoundscapeVoice`:
 
@@ -229,7 +253,7 @@ When `stopAll` is called (new pin / toggle off), `isLoading` resets to `true` fo
 - **`SpeciesDetail`**: renders skeleton while loading; shows photo when resolved; shows back button; calls onBack
 - **`SpeciesPanel`**: shows skeleton rows when isLoading; renders both sections; clicking row shows detail; back returns to list; empty state message when no obs
 - **`SoundscapeGrid`**: grid-cols-8 class present; no img tag when photo null (placeholder div instead); hover card content rendered; isLoading shows skeleton
-- **`useSoundscape`**: isLoading true initially per voice; transitions false on canplay event
+- **`useSoundscape`**: constants updated to new values; only first `INITIAL_VOICES` (3) trigger within stagger window; remaining voices use `intervalMs` as initial delay; isLoading true initially per voice; transitions false on canplay event
 
 ---
 
