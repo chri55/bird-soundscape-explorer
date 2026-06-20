@@ -106,19 +106,6 @@ export default function MapView() {
         )}
       </header>
 
-      {soundscape.voices.length > 0 && (
-        <div className="shrink-0 bg-gray-900 flex items-center gap-2 px-3 py-2 relative z-10">
-          <SoundscapeControls
-            isPlaying={soundscape.isPlaying}
-            voiceCount={soundscape.voices.length}
-            onToggle={soundscape.toggle}
-          />
-          <div className="flex-1 min-w-0 relative z-10">
-            <SoundscapeGrid voices={soundscape.voices} />
-          </div>
-        </div>
-      )}
-
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 relative z-0">
           <MapContainer center={[20, 0]} zoom={3} className="w-full h-full cursor-crosshair">
@@ -138,6 +125,19 @@ export default function MapView() {
           isLoading={isLoading}
         />
       </div>
+
+      {soundscape.voices.length > 0 && (
+        <div className="shrink-0 bg-gray-900 flex items-center gap-2 px-3 py-2 relative z-10">
+          <SoundscapeControls
+            isPlaying={soundscape.isPlaying}
+            voiceCount={soundscape.voices.length}
+            onToggle={soundscape.toggle}
+          />
+          <div className="flex-1 min-w-0 relative z-10">
+            <SoundscapeGrid voices={soundscape.voices} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
