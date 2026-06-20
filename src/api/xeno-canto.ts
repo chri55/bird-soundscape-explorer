@@ -47,5 +47,6 @@ export async function fetchRecordingsByBox(
 ): Promise<XCResponse> {
   let query = `box:${latMin},${lonMin},${latMax},${lonMax}`;
   if (month !== undefined) query += ` month:${month}`;
+  query += ` grp:birds`;
   return fetchRecordings(query);
 }
