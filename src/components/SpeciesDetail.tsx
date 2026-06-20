@@ -7,6 +7,8 @@ import { fetchBirdPhoto } from '../api/inat';
 import type { XCRecording } from '../api/xeno-canto';
 import { bestRecording } from '../utils/species';
 import { Skeleton } from './Skeleton';
+import type { WikiSummary } from '../api/wikipedia';
+import { fetchWikiSummary } from '../api/wikipedia';
 
 export interface SpeciesDetailProps {
   obs: EBirdObservation;
@@ -18,17 +20,27 @@ export function SpeciesDetail({ obs, recordings, onBack }: SpeciesDetailProps): 
   const [photo, setPhoto] = useState<BirdPhoto | null>(null);
   const [taxon, setTaxon] = useState<EBirdTaxon | null>(null);
   const [loading, setLoading] = useState(true);
+  const [wikiSummary, setWikiSummary] = useState<WikiSummary | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([fetchBirdPhoto(obs.sciName), fetchTaxonomy([obs.speciesCode])])
-      .then(([p, taxa]) => {
-        if (!cancelled) { setPhoto(p); setTaxon(taxa[0] ?? null); setLoading(false); }
+    Promise.all([
+      fetchBirdPhoto(obs.sciName),
+      fetchTaxonomy([obs.speciesCode]),
+      fetchWikiSummary(obs.comName).then(r => r ?? fetchWikiSummary(obs.sciName)),
+    ])
+      .then(([p, taxa, wiki]) => {
+        if (!cancelled) {
+          setPhoto(p);
+          setTaxon(taxa[0] ?? null);
+          setWikiSummary(wiki);
+          setLoading(false);
+        }
       })
       .catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [obs.sciName, obs.speciesCode]);
+  }, [obs.sciName, obs.speciesCode, obs.comName]);
 
   const recording = bestRecording(obs.sciName, recordings);
 
@@ -84,6 +96,14 @@ export function SpeciesDetail({ obs, recordings, onBack }: SpeciesDetailProps): 
             </div>
           )}
 
+          {/* Wikipedia summary */}
+          {wikiSummary && (
+            <div className="px-4 py-2 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Wikipedia</p>
+              <p className="text-sm text-gray-700 leading-relaxed">{wikiSummary.extract}</p>
+            </div>
+          )}
+
           {/* Observation data */}
           <div className="px-4 py-2 text-xs text-gray-600 space-y-1">
             {(obs.howMany ?? 0) > 0 && <p>{obs.howMany} seen</p>}
@@ -97,6 +117,28 @@ export function SpeciesDetail({ obs, recordings, onBack }: SpeciesDetailProps): 
               <p>Recording by {recording.rec} · {recording.type} · Quality {recording.q}</p>
             </div>
           )}
+
+          {/* External links */}
+          <div className="px-4 py-3 flex gap-2 border-t border-gray-100">
+            {wikiSummary && (
+              <a
+                href={wikiSummary.pageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium"
+              >
+                Wikipedia ↗
+              </a>
+            )}
+            <a
+              href={`https://ebird.org/species/${obs.speciesCode}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs px-3 py-1.5 rounded-full bg-green-50 text-green-700 hover:bg-green-100 font-medium"
+            >
+              eBird ↗
+            </a>
+          </div>
 
           {/* Photo attribution */}
           {photo && (
