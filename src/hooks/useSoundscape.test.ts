@@ -3,6 +3,7 @@ import type { EBirdObservation } from '../api/ebird';
 import {
   selectVoices, computeIntervalMs,
   MIN_INTERVAL_MS, MAX_INTERVAL_MS, MAX_VOICES,
+  INITIAL_VOICES,
   useSoundscape, INITIAL_STAGGER_MS,
 } from './useSoundscape';
 import { renderHook, act } from '@testing-library/react';
@@ -109,10 +110,10 @@ class MockAudio {
   removeEventListener(event: string, handler: () => void) {
     this._handlers[event] = (this._handlers[event] ?? []).filter(h => h !== handler);
   }
-  // Test helper: fire the event and clear one-shot ended handlers
+  // Test helper: fire the event and clear handlers (simulates { once: true })
   emit(event: string) {
     const handlers = [...(this._handlers[event] ?? [])];
-    if (event === 'ended') this._handlers['ended'] = [];
+    this._handlers[event] = [];
     handlers.forEach(h => h());
   }
 }
@@ -210,5 +211,53 @@ describe('useSoundscape', () => {
     await act(async () => { await vi.runAllTimersAsync(); });
     expect(fetchBirdPhoto).toHaveBeenCalledWith('Turdus migratorius');
     expect(result.current.voices[0].photo).not.toBeNull();
+  });
+});
+
+describe('useSoundscape — audio tuning', () => {
+  beforeEach(() => {
+    audioInstances.length = 0;
+    vi.stubGlobal('Audio', class extends MockAudio {
+      constructor(src: string) { super(src); audioInstances.push(this); }
+    });
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it('first INITIAL_VOICES voices fire within INITIAL_STAGGER_MS', async () => {
+    // 4 recordings: voices 0-2 are "initial", voice 3 waits its intervalMs
+    const recs = [
+      makeRec({ gen: 'Sp', sp: 'a', id: '1' }),
+      makeRec({ gen: 'Sp', sp: 'b', id: '2' }),
+      makeRec({ gen: 'Sp', sp: 'c', id: '3' }),
+      makeRec({ gen: 'Sp', sp: 'd', id: '4' }),
+    ];
+    const obs = [
+      makeObs('Sp a', 10), makeObs('Sp b', 9), makeObs('Sp c', 8), makeObs('Sp d', 1),
+    ];
+    const { result } = renderHook(() => useSoundscape(recs, obs));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); });
+    // After INITIAL_STAGGER_MS, first 3 should have played
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    const playedCount = audioInstances.slice(0, 3).filter(a => a.play.mock.calls.length > 0).length;
+    expect(playedCount).toBe(3);
+    // Voice 3's delay is MAX_INTERVAL_MS (howMany=1, all others higher) — not yet played
+    expect(audioInstances[3]?.play).not.toHaveBeenCalled();
+  });
+
+  it('voice isLoading transitions false when canplay fires', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+    expect(result.current.voices[0].isLoading).toBe(true);
+
+    act(() => { audioInstances[0].emit('canplay'); });
+    expect(result.current.voices[0].isLoading).toBe(false);
   });
 });
