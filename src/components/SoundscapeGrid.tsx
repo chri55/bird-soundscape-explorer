@@ -14,7 +14,7 @@ export function SoundscapeGrid({ voices }: SoundscapeGridProps) {
         <div
           key={voice.recording.id}
           className={`relative group rounded-lg ring-2 transition-all duration-300 ${
-            voice.isActive ? 'ring-green-400' : 'ring-transparent brightness-50'
+            voice.isActive ? 'ring-green-400' : 'ring-transparent'
           }`}
         >
           {/* Hover card — appears above the card */}
@@ -44,7 +44,9 @@ export function SoundscapeGrid({ voices }: SoundscapeGridProps) {
           </div>
 
           {/* Card content */}
-          <div className="relative w-full h-[110px] rounded-lg overflow-hidden bg-black/60">
+          <div className={`relative w-full h-[110px] rounded-lg overflow-hidden bg-black/60 transition-all duration-300 ${
+            !voice.isActive ? 'brightness-50' : ''
+          }`}>
             {voice.isLoading ? (
               <Skeleton className="w-full h-full rounded-none" />
             ) : voice.photo ? (
