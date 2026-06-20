@@ -19,7 +19,7 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
 
   if (selected) {
     return (
-      <div className="w-80 flex flex-col bg-white border-l border-gray-200 shrink-0 overflow-hidden">
+      <div className="w-80 flex flex-col bg-white border-l border-gray-200 shrink-0 overflow-y-auto">
         <SpeciesDetail obs={selected} recordings={recordings} onBack={() => setSelected(null)} />
       </div>
     );
