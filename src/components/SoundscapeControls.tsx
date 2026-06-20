@@ -8,7 +8,7 @@ export function SoundscapeControls({ isPlaying, voiceCount, onToggle }: Soundsca
   if (voiceCount === 0) return null;
 
   return (
-    <div className="shrink-0 bg-gray-900 flex items-center justify-center gap-4 py-3 px-6">
+    <div className="flex items-center gap-4 shrink-0">
       <button
         onClick={onToggle}
         aria-label={isPlaying ? 'Pause soundscape' : 'Play soundscape'}
