@@ -14,7 +14,10 @@ import { fetchRecentNearby, fetchNearbyNotable } from '../api/ebird';
 import type { XCRecording } from '../api/xeno-canto';
 import { fetchRecordingsByBox } from '../api/xeno-canto';
 import { useFeaturedBird } from '../hooks/useFeaturedBird';
+import { useSoundscape } from '../hooks/useSoundscape';
 import { FeaturedBirdCard } from './FeaturedBirdCard';
+import { SoundscapeGrid } from './SoundscapeGrid';
+import { SoundscapeControls } from './SoundscapeControls';
 
 const defaultIcon = L.icon({
   iconUrl: markerIconUrl,
@@ -53,6 +56,8 @@ export default function MapView() {
     recentObservations: recentObs,
     recordings,
   });
+
+  const soundscape = useSoundscape(recordings, recentObs);
 
   const fetchForPin = useCallback(async (pos: LatLng) => {
     if (lastFetchRef.current && haversineKm(pos, lastFetchRef.current) < FETCH_RADIUS_KM) return;
@@ -104,14 +109,18 @@ export default function MapView() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <MapContainer center={[20, 0]} zoom={3} className="flex-1 cursor-crosshair">
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <PinHandler onPin={handlePin} />
-          {pin && <Marker position={[pin.lat, pin.lng]} icon={defaultIcon} />}
-        </MapContainer>
+        {/* Map wrapper: relative so SoundscapeGrid can position inside it */}
+        <div className="relative flex-1">
+          <MapContainer center={[20, 0]} zoom={3} className="w-full h-full cursor-crosshair">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <PinHandler onPin={handlePin} />
+            {pin && <Marker position={[pin.lat, pin.lng]} icon={defaultIcon} />}
+          </MapContainer>
+          <SoundscapeGrid voices={soundscape.voices} />
+        </div>
 
         {featured.observation && (
           <FeaturedBirdCard
@@ -126,6 +135,12 @@ export default function MapView() {
           />
         )}
       </div>
+
+      <SoundscapeControls
+        isPlaying={soundscape.isPlaying}
+        voiceCount={soundscape.voices.length}
+        onToggle={soundscape.toggle}
+      />
     </div>
   );
 }
