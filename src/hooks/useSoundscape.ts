@@ -222,14 +222,14 @@ export function useSoundscape(
         const retries = retryCountsRef.current[idx] ?? 0;
         if (retries < MAX_AUDIO_RETRIES) {
           retryCountsRef.current[idx] = retries + 1;
-          setTimeout(() => {
+          timersRef.current.push(setTimeout(() => {
             if (cancelled) return;
             const a = audioRefs.current[idx];
             if (!a) return;
             a.src = a.src;
             a.load();
             attachAudioListeners(a, idx);
-          }, RETRY_DELAY_MS);
+          }, RETRY_DELAY_MS));
         } else {
           replaceFailedVoice(idx);
         }
@@ -244,7 +244,11 @@ export function useSoundscape(
       selected.map(s => fetchBirdPhoto(s.sciName).catch(() => null)),
     ).then(photos => {
       if (cancelled) return;
-      setVoices(v => v.map((voice, i) => ({ ...voice, photo: photos[i] ?? null })));
+      setVoices(v => v.map((voice, i) =>
+        voice.recording.id !== selected[i]?.recording.id
+          ? voice
+          : { ...voice, photo: photos[i] ?? null },
+      ));
     });
 
     return () => { cancelled = true; };
