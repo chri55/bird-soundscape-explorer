@@ -85,6 +85,13 @@ describe('computeIntervalMs', () => {
     const mid = (MIN_INTERVAL_MS + MAX_INTERVAL_MS) / 2;
     expect(computeIntervalMs(5, 5, 5)).toBe(mid);
   });
+
+  it('clamps ratio to [0,1] for out-of-range howMany', () => {
+    // howMany above max → ratio=1 → MIN_INTERVAL_MS
+    expect(computeIntervalMs(100, 1, 10)).toBe(MIN_INTERVAL_MS);
+    // howMany below min → ratio=0 → MAX_INTERVAL_MS
+    expect(computeIntervalMs(0, 1, 10)).toBe(MAX_INTERVAL_MS);
+  });
 });
 
 // ── MockAudio ──────────────────────────────────────────────────────────────
@@ -94,6 +101,7 @@ class MockAudio {
   private _handlers: Record<string, Array<() => void>> = {};
   play = vi.fn().mockResolvedValue(undefined);
   pause = vi.fn();
+  load = vi.fn();
   constructor(src: string) { this.src = src; }
   addEventListener(event: string, handler: () => void) {
     (this._handlers[event] ??= []).push(handler);
