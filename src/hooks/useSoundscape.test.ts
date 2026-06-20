@@ -5,6 +5,7 @@ import {
   MIN_INTERVAL_MS, MAX_INTERVAL_MS, MAX_VOICES,
   INITIAL_VOICES, SPARE_VOICES, MAX_AUDIO_RETRIES, RETRY_DELAY_MS,
   useSoundscape, INITIAL_STAGGER_MS,
+  SECONDARY_STAGGER_MIN_MS, SECONDARY_STAGGER_MAX_MS,
 } from './useSoundscape';
 import { renderHook, act } from '@testing-library/react';
 import { fetchBirdPhoto } from '../api/inat';
@@ -248,7 +249,7 @@ describe('useSoundscape — audio tuning', () => {
 
     const playedCount = audioInstances.slice(0, 3).filter(a => a.play.mock.calls.length > 0).length;
     expect(playedCount).toBe(3);
-    // Voice 3's delay is MAX_INTERVAL_MS (howMany=1, all others higher) — not yet played
+    // Voice 3's secondary stagger delay is at least INITIAL_STAGGER_MS + SECONDARY_STAGGER_MIN_MS — not yet played
     expect(audioInstances[3]?.play).not.toHaveBeenCalled();
   });
 
@@ -259,6 +260,48 @@ describe('useSoundscape — audio tuning', () => {
 
     act(() => { audioInstances[0].emit('canplay'); });
     expect(result.current.voices[0].isLoading).toBe(false);
+  });
+
+  it('secondary voices do not fire before INITIAL_STAGGER_MS + SECONDARY_STAGGER_MIN_MS', async () => {
+    const recs = [
+      makeRec({ gen: 'Sp', sp: 'a', id: '1' }),
+      makeRec({ gen: 'Sp', sp: 'b', id: '2' }),
+      makeRec({ gen: 'Sp', sp: 'c', id: '3' }),
+      makeRec({ gen: 'Sp', sp: 'd', id: '4' }),
+    ];
+    const obs = [
+      makeObs('Sp a', 10), makeObs('Sp b', 9), makeObs('Sp c', 8), makeObs('Sp d', 1),
+    ];
+    const { result } = renderHook(() => useSoundscape(recs, obs));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); });
+    // Advance to just before the earliest a secondary voice can fire
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + SECONDARY_STAGGER_MIN_MS - 100);
+    });
+    expect(audioInstances[3]?.play).not.toHaveBeenCalled();
+  });
+
+  it('secondary voices all fire by INITIAL_STAGGER_MS + SECONDARY_STAGGER_MAX_MS', async () => {
+    const recs = [
+      makeRec({ gen: 'Sp', sp: 'a', id: '1' }),
+      makeRec({ gen: 'Sp', sp: 'b', id: '2' }),
+      makeRec({ gen: 'Sp', sp: 'c', id: '3' }),
+      makeRec({ gen: 'Sp', sp: 'd', id: '4' }),
+    ];
+    const obs = [
+      makeObs('Sp a', 10), makeObs('Sp b', 9), makeObs('Sp c', 8), makeObs('Sp d', 1),
+    ];
+    const { result } = renderHook(() => useSoundscape(recs, obs));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); });
+    // Advance past the latest any secondary voice can fire
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + SECONDARY_STAGGER_MAX_MS + 500);
+    });
+    expect(audioInstances[3].play).toHaveBeenCalled();
   });
 });
 
