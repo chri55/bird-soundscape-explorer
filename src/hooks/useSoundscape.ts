@@ -4,11 +4,12 @@ import type { EBirdObservation } from '../api/ebird';
 import type { BirdPhoto } from '../api/inat';
 import { fetchBirdPhoto } from '../api/inat';
 
-export const MIN_INTERVAL_MS = 5_000;
-export const MAX_INTERVAL_MS = 90_000;
+export const MIN_INTERVAL_MS = 3_000;
+export const MAX_INTERVAL_MS = 30_000;
 export const JITTER_FACTOR = 0.25;
 export const MAX_VOICES = 8;
 export const INITIAL_STAGGER_MS = 3_000;
+export const INITIAL_VOICES = 3;
 
 export interface SoundscapeVoice {
   recording: XCRecording;
@@ -16,6 +17,7 @@ export interface SoundscapeVoice {
   howMany: number;
   intervalMs: number;
   isActive: boolean;
+  isLoading: boolean;
   photo: BirdPhoto | null;
 }
 
@@ -145,9 +147,17 @@ export function useSoundscape(
         howMany: s.howMany,
         intervalMs: intervals[i],
         isActive: false,
+        isLoading: true,
         photo: null,
       })),
     );
+
+    // Flip isLoading false when audio is ready to play
+    audioRefs.current.forEach((audio, idx) => {
+      audio.addEventListener('canplay', () => {
+        setVoices(v => v.map((voice, vi) => vi === idx ? { ...voice, isLoading: false } : voice));
+      }, { once: true } as AddEventListenerOptions);
+    });
 
     void Promise.all(
       selected.map(s => fetchBirdPhoto(s.sciName).catch(() => null)),
@@ -167,8 +177,10 @@ export function useSoundscape(
       isPlayingRef.current = true;
       setIsPlaying(true);
       audioRefs.current.forEach((_, i) => {
-        const stagger = Math.random() * INITIAL_STAGGER_MS;
-        timersRef.current.push(setTimeout(() => startVoice(i), stagger));
+        const delay = i < INITIAL_VOICES
+          ? Math.random() * INITIAL_STAGGER_MS
+          : (intervalsRef.current[i] ?? MAX_INTERVAL_MS);
+        timersRef.current.push(setTimeout(() => startVoice(i), delay));
       });
     }
   }, [stopAll, startVoice]);
