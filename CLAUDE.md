@@ -16,11 +16,12 @@ Run a single test file: `npx vitest run src/path/to/file.test.ts`
 
 ## Environment variables
 
-Both keys are required; set them in `.env.local`:
+Set them in `.env.local`:
 
 ```
 VITE_EBIRD_API_KEY=       # from ebird.org/api/keygen
 VITE_XC_API_KEY=          # from xeno-canto.org/account
+VITE_NPS_API_KEY=         # from developer.nps.gov/api/keygen
 ```
 
 ## Architecture
@@ -33,10 +34,11 @@ React 19 + TypeScript, Vite 8, Tailwind CSS v4 (via `@tailwindcss/vite` plugin),
 
 ### API layer (`src/api/`)
 
-Two typed API clients, each reading keys from `import.meta.env`:
+Three typed API clients, each reading keys from `import.meta.env`:
 
 - **`ebird.ts`** — `fetchRecentNearby(lat, lng)` → `EBirdObservation[]` from `GET /data/obs/geo/recent`. Sends key as `x-ebirdapitoken` header. Provides the "what's here right now" species list.
 - **`xeno-canto.ts`** — `fetchRecordings(query)` and `fetchRecordingsByBox(latMin, latMax, lonMin, lonMax, month?)` from Xeno-canto API v3. Key is a query param. Provides MP3 URLs (`XCRecording.file`) for the audio soundscape.
+- **`nps.ts`** — `fetchParks()` → `NpsPark[]` from `GET /parks`. Provides national park locations and codes.
 
 ### Seasonal simulation
 
