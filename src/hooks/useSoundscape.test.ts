@@ -100,22 +100,23 @@ describe('computeIntervalMs', () => {
 class MockAudio {
   src: string;
   currentTime = 0;
-  private _handlers: Record<string, Array<() => void>> = {};
+  private _handlers: Record<string, Array<{ fn: () => void; once: boolean }>> = {};
   play = vi.fn().mockResolvedValue(undefined);
   pause = vi.fn();
   load = vi.fn();
   constructor(src: string) { this.src = src; }
-  addEventListener(event: string, handler: () => void) {
-    (this._handlers[event] ??= []).push(handler);
+  addEventListener(event: string, handler: () => void, options?: { once?: boolean } | boolean) {
+    const once = typeof options === 'boolean' ? options : (options?.once ?? false);
+    (this._handlers[event] ??= []).push({ fn: handler, once });
   }
   removeEventListener(event: string, handler: () => void) {
-    this._handlers[event] = (this._handlers[event] ?? []).filter(h => h !== handler);
+    this._handlers[event] = (this._handlers[event] ?? []).filter(h => h.fn !== handler);
   }
-  // Test helper: fire the event and clear handlers (simulates { once: true })
+  // Test helper: fire the event; only auto-remove handlers registered with { once: true }
   emit(event: string) {
-    const handlers = [...(this._handlers[event] ?? [])];
-    this._handlers[event] = [];
-    handlers.forEach(h => h());
+    const entries = [...(this._handlers[event] ?? [])];
+    this._handlers[event] = (this._handlers[event] ?? []).filter(h => !h.once);
+    entries.forEach(h => h.fn());
   }
 }
 
