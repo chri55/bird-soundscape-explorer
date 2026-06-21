@@ -401,6 +401,40 @@ describe('useSoundscape — XC retry + voice replacement', () => {
     expect(result.current.voices).toHaveLength(2);
   });
 
+  it('does not accumulate ended listeners across voice replacements', async () => {
+    // Need MAX_VOICES+1 recordings so there is a spare to swap in.
+    const recs = Array.from({ length: 9 }, (_, i) =>
+      makeRec({ gen: 'Sp', sp: String(i), id: String(i) }),
+    );
+    const obsList = Array.from({ length: 9 }, (_, i) =>
+      makeObs(`Sp ${i}`, 10 - i),
+    );
+    const { result } = renderHook(() => useSoundscape(recs, obsList));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); }); // start playback
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    // exhaust retries on voice 0 → triggers replaceFailedVoice → new audio at index 0
+    act(() => { audioInstances[0].emit('error'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS + 100); });
+    act(() => { audioInstances[0].emit('error'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS + 100); });
+    act(() => { audioInstances[0].emit('error'); });
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    // voice 0 has been replaced with the spare (audioInstances[8] is the new Audio)
+    const replacementAudio = audioInstances[audioInstances.length - 1];
+    // Simulate the new audio playing its canplay + stagger firing
+    act(() => { replacementAudio.emit('canplay'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    // fire 'ended' once — must schedule exactly one timer
+    const timersBefore = vi.getTimerCount();
+    act(() => { replacementAudio.emit('ended'); });
+    expect(vi.getTimerCount()).toBe(timersBefore + 1);
+  });
+
   it('resume after pause plays audio without adding duplicate ended listeners', async () => {
     const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
     await act(async () => { await vi.runAllTimersAsync(); });
