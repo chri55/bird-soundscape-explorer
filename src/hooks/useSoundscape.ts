@@ -306,7 +306,7 @@ export function useSoundscape(
       isMutedRef.current.length === count && isMutedRef.current.every(Boolean);
     if (currentlyAllMuted) {
       isMutedRef.current = new Array(count).fill(false);
-      setVoices(v => v.map(voice => ({ ...voice, isMuted: false })));
+      setVoices(v => v.map(voice => ({ ...voice, isMuted: false, isActive: isPlayingRef.current })));
       if (isPlayingRef.current) {
         audioRefs.current.forEach((_, i) => startVoice(i));
       }

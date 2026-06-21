@@ -535,6 +535,7 @@ describe('useSoundscape — mute all and loaded count', () => {
     act(() => { result.current.muteAll(); }); // unmute all
 
     expect(result.current.voices.every(v => v.isMuted)).toBe(false);
+    expect(result.current.voices.every(v => !v.isActive)).toBe(true); // not playing → isActive false
   });
 
   it('muteAll unmute while playing calls play on each voice audio', async () => {
@@ -548,6 +549,7 @@ describe('useSoundscape — mute all and loaded count', () => {
     const playsBefore = audioInstances.map(a => a.play.mock.calls.length);
 
     act(() => { result.current.muteAll(); }); // unmute all — should trigger startVoice
+    expect(result.current.voices.every(v => v.isActive)).toBe(true); // playing → isActive optimistically true
 
     expect(audioInstances[0].play.mock.calls.length).toBeGreaterThan(playsBefore[0]);
     expect(audioInstances[1].play.mock.calls.length).toBeGreaterThan(playsBefore[1]);
