@@ -55,6 +55,7 @@ export function ParkSearch({ parks, onSelect }: ParkSearchProps): JSX.Element {
         />
         {query && (
           <button
+            type="button"
             onClick={() => { setQuery(''); setIsOpen(false); }}
             aria-label="Clear search"
             className="shrink-0"
@@ -68,6 +69,7 @@ export function ParkSearch({ parks, onSelect }: ParkSearchProps): JSX.Element {
           {results.map(park => (
             <li key={park.parkCode}>
               <button
+                type="button"
                 className="w-full text-left px-3 py-2 text-sm text-gray-800 hover:bg-gray-100 truncate block"
                 onClick={() => handleSelect(park)}
               >

@@ -82,6 +82,7 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
               />
               {filterQuery && (
                 <button
+                  type="button"
                   onClick={() => setFilterQuery('')}
                   aria-label="Clear filter"
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-base leading-none"
