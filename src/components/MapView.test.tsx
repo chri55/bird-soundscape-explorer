@@ -21,7 +21,25 @@ vi.mock('react-leaflet', () => ({
   TileLayer: () => null,
   Marker: () => null,
   useMapEvents: (handlers: { click?: (e: unknown) => void }) => { (globalThis as Record<string, unknown>)._mapClick = handlers.click; return null; },
+  useMap: () => ({ addLayer: vi.fn(), removeLayer: vi.fn() }),
 }));
+
+vi.mock('leaflet.markercluster', () => ({}));
+
+vi.mock('leaflet', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('leaflet')>();
+  const mockClusterGroup = {
+    addLayers: vi.fn(),
+    addTo: vi.fn(),
+  };
+  return {
+    ...actual,
+    default: {
+      ...actual.default,
+      markerClusterGroup: vi.fn(() => mockClusterGroup),
+    },
+  };
+});
 
 function simulateMapClick(lat: number, lng: number) {
   const click = (globalThis as Record<string, unknown>)._mapClick as ((e: { latlng: { lat: number; lng: number } }) => void) | undefined;

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -19,6 +19,7 @@ import { SpeciesPanel } from './SpeciesPanel';
 import { SoundscapeGrid } from './SoundscapeGrid';
 import { SoundscapeControls } from './SoundscapeControls';
 import { useNpsParks } from '../hooks/useNpsParks';
+import { ParkClusterLayer } from './ParkClusterLayer';
 
 const defaultIcon = L.icon({
   iconUrl: markerIconUrl,
@@ -30,13 +31,6 @@ const defaultIcon = L.icon({
   shadowSize: [41, 41],
 });
 
-const parkIcon = L.divIcon({
-  html: '<div style="background:#16a34a;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>',
-  className: '',
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
-  popupAnchor: [0, -8],
-});
 
 const FETCH_RADIUS_KM = 10;
 const DEBOUNCE_MS = 500;
@@ -132,16 +126,7 @@ export default function MapView() {
             />
             <PinHandler onPin={handlePin} />
             {pin && <Marker position={[pin.lat, pin.lng]} icon={defaultIcon} />}
-            {parks.map(park => (
-              <Marker
-                key={park.parkCode}
-                position={[parseFloat(park.latitude), parseFloat(park.longitude)]}
-                icon={parkIcon}
-                eventHandlers={{ click: () => handlePin({ lat: parseFloat(park.latitude), lng: parseFloat(park.longitude) }) }}
-              >
-                <Popup>{park.fullName}</Popup>
-              </Marker>
-            ))}
+            <ParkClusterLayer parks={parks} onParkClick={handlePin} />
           </MapContainer>
         </div>
       </div>
