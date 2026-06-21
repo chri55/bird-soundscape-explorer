@@ -3,6 +3,7 @@ import type { XCRecording } from '../api/xeno-canto';
 import type { EBirdObservation } from '../api/ebird';
 import type { BirdPhoto } from '../api/inat';
 import { fetchBirdPhoto } from '../api/inat';
+import { qualityRank, typeScore } from '../utils/recording-quality';
 
 export const MIN_INTERVAL_MS = 3_000;
 export const MAX_INTERVAL_MS = 30_000;
@@ -37,9 +38,6 @@ export interface UseSoundscapeResult {
   allMuted: boolean;
   loadedCount: number;
 }
-
-const qualityRank: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 };
-const typeScore = (type: string) => (type.toLowerCase().includes('song') ? 0 : 1);
 
 export function selectVoices(
   recordings: XCRecording[],
