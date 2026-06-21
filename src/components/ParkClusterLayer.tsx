@@ -36,6 +36,8 @@ export function ParkClusterLayer({ parks, onParkClick }: ParkClusterLayerProps) 
       const lat = parseFloat(park.latitude);
       const lng = parseFloat(park.longitude);
       const marker = L.marker([lat, lng], { icon: parkIcon });
+      marker.bindPopup(park.fullName);
+      marker.bindTooltip(park.fullName);
       marker.on('click', () => onParkClick({ lat, lng }));
       return marker;
     });
