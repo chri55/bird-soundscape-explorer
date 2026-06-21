@@ -19,7 +19,7 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
 
   if (selected) {
     return (
-      <div className="w-80 flex flex-col bg-white border-l border-gray-200 shrink-0 overflow-y-auto">
+      <div className="w-full h-72 md:h-auto md:w-80 flex flex-col bg-white border-b border-gray-200 md:border-b-0 md:border-l shrink-0 overflow-y-auto md:order-last">
         <SpeciesDetail obs={selected} recordings={recordings} onBack={() => setSelected(null)} />
       </div>
     );
@@ -33,7 +33,7 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
   const isEmpty = !isLoading && dedupedNotable.length === 0 && dedupedRecent.length === 0;
 
   return (
-    <div className="w-80 flex flex-col bg-white border-l border-gray-200 shrink-0 overflow-y-auto">
+    <div className="w-full h-72 md:h-auto md:w-80 flex flex-col bg-white border-b border-gray-200 md:border-b-0 md:border-l shrink-0 overflow-y-auto md:order-last">
       {isEmpty ? (
         <div className="flex-1 flex items-center justify-center p-6 text-center">
           <p className="text-gray-400 text-sm">

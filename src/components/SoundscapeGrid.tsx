@@ -22,7 +22,6 @@ export function SoundscapeGrid({ voices, onToggleMute }: SoundscapeGridProps) {
               voice.isActive ? 'ring-green-400' : 'ring-transparent'
             }`}
           >
-            {/* Hover card — appears above the card */}
             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 w-48 bg-gray-900 rounded-lg overflow-hidden shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-150 pointer-events-none">
               <div className="aspect-video bg-gray-800">
                 {voice.photo ? (
