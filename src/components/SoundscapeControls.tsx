@@ -1,3 +1,6 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
+
 export interface SoundscapeControlsProps {
   isPlaying: boolean;
   voiceCount: number;
@@ -18,7 +21,7 @@ export function SoundscapeControls({ isPlaying, voiceCount, onToggle }: Soundsca
             : 'bg-white hover:bg-gray-100 text-gray-900'
         }`}
       >
-        {isPlaying ? '⏸' : '▶'}
+        {isPlaying ? <FontAwesomeIcon icon={faPause} /> : <FontAwesomeIcon icon={faPlay} />}
       </button>
       <span className="text-white text-sm">
         {isPlaying ? `${voiceCount} birds playing` : `${voiceCount} birds ready`}
