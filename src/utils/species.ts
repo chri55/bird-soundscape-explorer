@@ -1,5 +1,6 @@
 import type { EBirdObservation } from '../api/ebird';
 import type { XCRecording } from '../api/xeno-canto';
+import { qualityRank, typeScore } from './recording-quality';
 
 export function deduplicateObs(obs: EBirdObservation[]): EBirdObservation[] {
   const seen = new Map<string, EBirdObservation>();
@@ -13,9 +14,6 @@ export function deduplicateObs(obs: EBirdObservation[]): EBirdObservation[] {
   }
   return [...seen.values()];
 }
-
-const qualityRank: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 };
-const typeScore = (type: string) => (type.toLowerCase().includes('song') ? 0 : 1);
 
 export function bestRecording(sciName: string, recordings: XCRecording[]): XCRecording | null {
   const parts = sciName.toLowerCase().split(' ');
