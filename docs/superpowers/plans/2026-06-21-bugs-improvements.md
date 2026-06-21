@@ -149,14 +149,19 @@ git commit -m "fix: discard stale fetch results when pin changes mid-flight"
 
 ---
 
-### Task 2: Unhandled rejection in fetchForPin leaves isLoading stuck at true
+### Task 2: Silent rejection in fetchForPin — no error UI when APIs fail
 
-**Root cause:** The existing `fetchForPin` in `MapView.tsx` has a `try/finally` block but no `catch`. If any of the three `Promise.all` members rejects (e.g., eBird returns 401, network is offline), the error propagates out of the async function as an unhandled rejection. The `finally` block does run and clears `isLoading` — BUT `fillRecordingGaps` is awaited *after* `Promise.all` and *outside* the finally guard. If `fillRecordingGaps` rejects (e.g., a gap-fill fetch throws), `setIsLoading(false)` is never called because the `finally` has already run by the time `fillRecordingGaps` was called. Additionally, `void fetchForPin(pos)` in the debounce callback suppresses the rejection entirely, so no error is surfaced in production.
+**Root cause:** `fetchForPin` in `MapView.tsx` has a `try/finally` block but no `catch` block. `fillRecordingGaps` is inside the `try` block, so the `finally` correctly runs (and clears `isLoading`) regardless of which line throws. The `isLoading` flag is NOT stuck. However:
 
-**Fix:** Move `fillRecordingGaps` inside the `try` block and add a `catch` that clears state and logs. This is addressed by the same edit as Task 1 above (the rewritten `fetchForPin` already does this). Confirm with a dedicated test.
+- `fetchForPin` is called as `void fetchForPin(pos)` in the debounce callback, which suppresses any unhandled rejection entirely in production
+- When any of the three `Promise.all` members rejects (network error, eBird 401, XC 5xx), the `finally` clears the spinner but there is no `catch` block — so no error state is set and no error message is displayed
+- The user sees: spinner disappears, species panel remains empty, no explanation — a completely silent failure
+- An unhandled promise rejection also appears in the console, which is invisible to end users
+
+**Fix:** Add a `const [fetchError, setFetchError] = useState<string | null>(null)` state. Add a `catch` block that calls `setFetchError('Failed to load bird data')`. Reset `fetchError` to `null` at the start of each new fetch. Render the error message in the species panel area or header when `fetchError` is set.
 
 **Files:**
-- Modify: `src/components/MapView.tsx` (done in Task 1)
+- Modify: `src/components/MapView.tsx` — add `fetchError` state, catch block, and error message render
 - Modify: `src/components/MapView.test.tsx`
 
 - [ ] **Step 1: Write failing test**
@@ -164,40 +169,90 @@ git commit -m "fix: discard stale fetch results when pin changes mid-flight"
 Add to `src/components/MapView.test.tsx`:
 
 ```typescript
-it('clears isLoading when fetchNearbyNotable rejects', async () => {
-  vi.mocked(fetchNearbyNotable).mockRejectedValueOnce(new Error('eBird 401'));
+it('shows an error message when fetchRecentNearby rejects', async () => {
+  vi.mocked(fetchRecentNearby).mockRejectedValueOnce(new Error('network error'));
 
-  const { getByText } = render(<MapView />);
+  render(<MapView />);
   simulateMapClick(37.77, -122.4);
+  await vi.advanceTimersByTimeAsync(600); // past debounce
   await vi.runAllTimersAsync();
 
-  // isLoading should be false again — UI must not be permanently stuck
-  // The component renders a loading indicator only when isLoading=true and
-  // recordings/obs are empty; after the error clears, the empty-state message shows.
-  // We simply check no "loading" spinner is present by confirming no unhandled rejection:
-  expect(fetchNearbyNotable).toHaveBeenCalled();
-  // If isLoading were stuck, the test would time out or the spinner would persist.
-  // This is a regression guard: if the fix reverts, the finally-only path leaves isLoading=true.
+  // Before the fix: no error UI exists — this assertion WILL FAIL
+  expect(await screen.findByText(/failed to load/i)).toBeInTheDocument();
 });
 ```
+
+Note: MapView uses Leaflet, which requires mocking in jsdom (the existing test file already mocks `react-leaflet` and `leaflet`). If the existing mock infrastructure is insufficient to render `<MapView />` in isolation, extract the error-display logic into a smaller testable unit (e.g., an `ErrorBanner` component) and test that instead. Use judgment based on what the existing `MapView.test.tsx` file already does.
 
 - [ ] **Step 2: Run test to verify it fails before fix**
 ```
 npx vitest run src/components/MapView.test.tsx
 ```
-Expected: FAIL (unhandled rejection warning / isLoading not cleared)
+Expected: FAIL — `screen.findByText(/failed to load/i)` throws because no error message is rendered
 
 - [ ] **Step 3: Implement fix**
-The fix is included in the `fetchForPin` rewrite in Task 1 Step 3. No additional code change needed.
+
+In `src/components/MapView.tsx`:
+
+1. Add error state after the existing `isLoading` state:
+```typescript
+const [fetchError, setFetchError] = useState<string | null>(null);
+```
+
+2. Update `fetchForPin` to reset the error at the start and catch rejections:
+```typescript
+const fetchForPin = useCallback(async (pos: LatLng) => {
+  if (lastFetchRef.current && haversineKm(pos, lastFetchRef.current) < FETCH_RADIUS_KM) return;
+  lastFetchRef.current = pos;
+
+  setIsLoading(true);
+  setFetchError(null); // clear any previous error
+  const month = new Date().getMonth() + 1;
+  try {
+    const [notable, recent, xcRes] = await Promise.all([
+      fetchNearbyNotable(pos.lat, pos.lng),
+      fetchRecentNearby(pos.lat, pos.lng),
+      fetchRecordingsByBox(
+        pos.lat - XC_BOX_DEG,
+        pos.lat + XC_BOX_DEG,
+        pos.lng - XC_BOX_DEG,
+        pos.lng + XC_BOX_DEG,
+        month,
+      ),
+    ]);
+    setNotableObs(notable);
+    setRecentObs(recent);
+    setRecordings(await fillRecordingGaps(xcRes.recordings, recent, MAX_VOICES + SPARE_VOICES));
+  } catch (err) {
+    console.error('fetchForPin failed:', err);
+    setFetchError('Failed to load bird data');
+  } finally {
+    setIsLoading(false);
+  }
+}, []);
+```
+
+3. Render the error message in the JSX (e.g., in the header or above the species panel):
+```tsx
+{fetchError && (
+  <div className="px-4 py-2 bg-red-700 text-white text-sm shrink-0">
+    {fetchError}
+  </div>
+)}
+```
+
+Note: Task 1's `fetchForPin` rewrite also adds a `catch` block — coordinate both tasks so the error state from this task is included in that rewrite rather than duplicated.
 
 - [ ] **Step 4: Run test to verify it passes**
 ```
 npx vitest run src/components/MapView.test.tsx
 ```
-Expected: PASS
+Expected: PASS — `screen.findByText(/failed to load/i)` finds the error banner
 
 - [ ] **Step 5: Commit**
-Included in Task 1 commit.
+```
+git commit -m "fix: show error UI when API fetch fails instead of silent rejection"
+```
 
 ---
 
@@ -369,10 +424,9 @@ This correctly handles `null` via `?? null`. The direct crash surface is actuall
 
 - [ ] **Step 1: Write failing test**
 
-In `src/api/inat.test.ts`, add (imports already present — this file uses explicit vitest imports):
+In `src/api/inat.test.ts`, add the following. The existing file already imports `describe`, `it`, `expect`, `vi`, and `beforeEach` from `'vitest'` — do not add a second import statement. Only add `clearPhotoCache` to the existing import from `'../api/inat'` (or wherever `fetchBirdPhoto` is already imported).
 
 ```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchBirdPhoto, clearPhotoCache } from '../api/inat';
 
 // Add clearPhotoCache export to inat.ts as part of this fix (see Step 3)
