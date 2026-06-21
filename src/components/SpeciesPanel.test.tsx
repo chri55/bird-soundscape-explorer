@@ -97,4 +97,80 @@ describe('SpeciesPanel', () => {
     fireEvent.click(screen.getByText('← Back'));
     expect(screen.getByText('Rarest Sightings')).toBeInTheDocument();
   });
+
+  it('shows filter input when species are loaded', () => {
+    render(
+      <SpeciesPanel
+        notableObs={[makeObs('Snow Bunting', 1)]}
+        recentObs={[]}
+        recordings={[]}
+        isLoading={false}
+      />,
+    );
+    expect(screen.getByPlaceholderText('Filter birds…')).toBeInTheDocument();
+  });
+
+  it('filters species by common name substring', () => {
+    render(
+      <SpeciesPanel
+        notableObs={[makeObs('Snow Bunting', 1), makeObs('American Robin', 2)]}
+        recentObs={[]}
+        recordings={[]}
+        isLoading={false}
+      />,
+    );
+    fireEvent.change(screen.getByPlaceholderText('Filter birds…'), { target: { value: 'snow' } });
+    expect(screen.getByText('Snow Bunting')).toBeInTheDocument();
+    expect(screen.queryByText('American Robin')).not.toBeInTheDocument();
+  });
+
+  it('filters species by scientific name substring', () => {
+    render(
+      <SpeciesPanel
+        notableObs={[makeObs('Snow Bunting', 1)]}
+        recentObs={[]}
+        recordings={[]}
+        isLoading={false}
+      />,
+    );
+    // makeObs sets sciName = comName.toLowerCase().replace(' ', '.') → 'snow.bunting'
+    fireEvent.change(screen.getByPlaceholderText('Filter birds…'), { target: { value: 'snow.bunt' } });
+    expect(screen.getByText('Snow Bunting')).toBeInTheDocument();
+  });
+
+  it('shows No matches when filter has no results', () => {
+    render(
+      <SpeciesPanel
+        notableObs={[makeObs('Snow Bunting', 1)]}
+        recentObs={[]}
+        recordings={[]}
+        isLoading={false}
+      />,
+    );
+    fireEvent.change(screen.getByPlaceholderText('Filter birds…'), { target: { value: 'xyz' } });
+    expect(screen.getByText('No matches')).toBeInTheDocument();
+  });
+
+  it('resets filter when notableObs prop changes', () => {
+    const { rerender } = render(
+      <SpeciesPanel
+        notableObs={[makeObs('Snow Bunting', 1)]}
+        recentObs={[]}
+        recordings={[]}
+        isLoading={false}
+      />,
+    );
+    fireEvent.change(screen.getByPlaceholderText('Filter birds…'), { target: { value: 'snow' } });
+    expect(screen.getByPlaceholderText('Filter birds…')).toHaveValue('snow');
+
+    rerender(
+      <SpeciesPanel
+        notableObs={[makeObs('American Robin', 2)]}
+        recentObs={[]}
+        recordings={[]}
+        isLoading={false}
+      />,
+    );
+    expect(screen.getByPlaceholderText('Filter birds…')).toHaveValue('');
+  });
 });

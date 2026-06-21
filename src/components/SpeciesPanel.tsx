@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import type { EBirdObservation } from '../api/ebird';
 import type { XCRecording } from '../api/xeno-canto';
@@ -16,6 +16,11 @@ export interface SpeciesPanelProps {
 
 export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: SpeciesPanelProps): JSX.Element {
   const [selected, setSelected] = useState<EBirdObservation | null>(null);
+  const [filterQuery, setFilterQuery] = useState('');
+
+  useEffect(() => {
+    setFilterQuery('');
+  }, [notableObs, recentObs]);
 
   if (selected) {
     return (
@@ -31,6 +36,14 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
   );
 
   const isEmpty = !isLoading && dedupedNotable.length === 0 && dedupedRecent.length === 0;
+
+  const q = filterQuery.toLowerCase();
+  const filteredNotable = dedupedNotable.filter(
+    obs => !q || obs.comName.toLowerCase().includes(q) || obs.sciName.toLowerCase().includes(q),
+  );
+  const filteredRecent = dedupedRecent.filter(
+    obs => !q || obs.comName.toLowerCase().includes(q) || obs.sciName.toLowerCase().includes(q),
+  );
 
   return (
     <div className="w-full h-72 md:h-auto md:w-80 flex flex-col bg-white border-b border-gray-200 md:border-b-0 md:border-l shrink-0 overflow-y-auto md:order-last">
@@ -57,6 +70,27 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
         </div>
       ) : (
         <>
+          <div className="shrink-0 px-3 py-2 border-b border-gray-200">
+            <div className="relative">
+              <input
+                type="text"
+                value={filterQuery}
+                onChange={e => setFilterQuery(e.target.value)}
+                placeholder="Filter birds…"
+                className="w-full text-sm rounded-md border border-gray-200 px-3 py-1.5 pr-7 outline-none focus:border-green-400 text-gray-800 placeholder-gray-400"
+                aria-label="Filter species"
+              />
+              {filterQuery && (
+                <button
+                  onClick={() => setFilterQuery('')}
+                  aria-label="Clear filter"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-base leading-none"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </div>
           {dedupedNotable.length > 0 && (
             <section>
               <div className="sticky top-0 bg-white px-4 py-2 border-b border-gray-100">
@@ -64,14 +98,18 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
                   Rarest Sightings
                 </h3>
               </div>
-              {dedupedNotable.map(obs => (
-                <SpeciesListRow
-                  key={obs.sciName}
-                  obs={obs}
-                  isNotable={true}
-                  onClick={() => setSelected(obs)}
-                />
-              ))}
+              {filteredNotable.length === 0 ? (
+                <p className="px-4 py-3 text-sm text-gray-400">No matches</p>
+              ) : (
+                filteredNotable.map(obs => (
+                  <SpeciesListRow
+                    key={obs.sciName}
+                    obs={obs}
+                    isNotable={true}
+                    onClick={() => setSelected(obs)}
+                  />
+                ))
+              )}
             </section>
           )}
           {dedupedRecent.length > 0 && (
@@ -81,14 +119,18 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
                   Most Common
                 </h3>
               </div>
-              {dedupedRecent.map(obs => (
-                <SpeciesListRow
-                  key={obs.sciName}
-                  obs={obs}
-                  isNotable={false}
-                  onClick={() => setSelected(obs)}
-                />
-              ))}
+              {filteredRecent.length === 0 ? (
+                <p className="px-4 py-3 text-sm text-gray-400">No matches</p>
+              ) : (
+                filteredRecent.map(obs => (
+                  <SpeciesListRow
+                    key={obs.sciName}
+                    obs={obs}
+                    isNotable={false}
+                    onClick={() => setSelected(obs)}
+                  />
+                ))
+              )}
             </section>
           )}
         </>
