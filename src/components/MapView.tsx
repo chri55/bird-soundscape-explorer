@@ -116,9 +116,16 @@ export default function MapView() {
         )}
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 relative z-0">
-          <MapContainer center={[20, 0]} zoom={3} className="w-full h-full cursor-crosshair">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+        <SpeciesPanel
+          notableObs={notableObs}
+          recentObs={recentObs}
+          recordings={recordings}
+          isLoading={isLoading}
+        />
+
+        <div className="flex-1 relative z-0 min-h-0">
+          <MapContainer center={[39.5, -98.35]} zoom={4} className="w-full h-full cursor-crosshair">
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -137,13 +144,6 @@ export default function MapView() {
             ))}
           </MapContainer>
         </div>
-
-        <SpeciesPanel
-          notableObs={notableObs}
-          recentObs={recentObs}
-          recordings={recordings}
-          isLoading={isLoading}
-        />
       </div>
 
       {soundscape.voices.length > 0 && (
@@ -151,7 +151,10 @@ export default function MapView() {
           <SoundscapeControls
             isPlaying={soundscape.isPlaying}
             voiceCount={soundscape.voices.length}
+            loadedCount={soundscape.loadedCount}
+            allMuted={soundscape.allMuted}
             onToggle={soundscape.toggle}
+            onMuteAll={soundscape.muteAll}
           />
           <div className="flex-1 min-w-0 relative z-10">
             <SoundscapeGrid voices={soundscape.voices} onToggleMute={soundscape.toggleMute} />
