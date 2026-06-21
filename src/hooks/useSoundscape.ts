@@ -33,6 +33,9 @@ export interface UseSoundscapeResult {
   isPlaying: boolean;
   toggle: () => void;
   toggleMute: (index: number) => void;
+  muteAll: () => void;
+  allMuted: boolean;
+  loadedCount: number;
 }
 
 const qualityRank: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 };
@@ -296,6 +299,24 @@ export function useSoundscape(
     }
   }, [startVoice]);
 
+  const muteAll = useCallback(() => {
+    const count = audioRefs.current.length;
+    if (count === 0) return;
+    const currentlyAllMuted =
+      isMutedRef.current.length === count && isMutedRef.current.every(Boolean);
+    if (currentlyAllMuted) {
+      isMutedRef.current = new Array(count).fill(false);
+      setVoices(v => v.map(voice => ({ ...voice, isMuted: false })));
+      if (isPlayingRef.current) {
+        audioRefs.current.forEach((_, i) => startVoice(i));
+      }
+    } else {
+      isMutedRef.current = new Array(count).fill(true);
+      audioRefs.current.forEach(a => { a.pause(); a.currentTime = 0; });
+      setVoices(v => v.map(voice => ({ ...voice, isMuted: true, isActive: false })));
+    }
+  }, [startVoice]);
+
   const toggle = useCallback(() => {
     if (isPlayingRef.current) {
       pauseAll();
@@ -324,5 +345,8 @@ export function useSoundscape(
     };
   }, []);
 
-  return { voices, isPlaying, toggle, toggleMute };
+  const allMuted = voices.length > 0 && voices.every(v => v.isMuted);
+  const loadedCount = voices.filter(v => !v.isLoading && !v.isFailed).length;
+
+  return { voices, isPlaying, toggle, toggleMute, muteAll, allMuted, loadedCount };
 }

@@ -513,3 +513,84 @@ describe('useSoundscape — mute', () => {
     expect(audioInstances[0].play).not.toHaveBeenCalled();
   });
 });
+
+describe('useSoundscape — mute all and loaded count', () => {
+  it('muteAll mutes all voices and pauses their audio', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1, xcRec2], [obs1, obs2]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.muteAll(); });
+
+    expect(result.current.voices.every(v => v.isMuted)).toBe(true);
+    expect(result.current.voices.every(v => !v.isActive)).toBe(true);
+    expect(audioInstances[0].pause).toHaveBeenCalled();
+    expect(audioInstances[1].pause).toHaveBeenCalled();
+  });
+
+  it('muteAll unmutes all voices when all are already muted', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1, xcRec2], [obs1, obs2]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.muteAll(); }); // mute all
+    act(() => { result.current.muteAll(); }); // unmute all
+
+    expect(result.current.voices.every(v => v.isMuted)).toBe(false);
+  });
+
+  it('muteAll unmute while playing calls play on each voice audio', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1, xcRec2], [obs1, obs2]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    act(() => { result.current.muteAll(); }); // mute all
+    const playsBefore = audioInstances.map(a => a.play.mock.calls.length);
+
+    act(() => { result.current.muteAll(); }); // unmute all — should trigger startVoice
+
+    expect(audioInstances[0].play.mock.calls.length).toBeGreaterThan(playsBefore[0]);
+    expect(audioInstances[1].play.mock.calls.length).toBeGreaterThan(playsBefore[1]);
+  });
+
+  it('allMuted is false initially when voices exist', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    expect(result.current.allMuted).toBe(false);
+  });
+
+  it('allMuted is true after muteAll', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1, xcRec2], [obs1, obs2]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.muteAll(); });
+
+    expect(result.current.allMuted).toBe(true);
+  });
+
+  it('allMuted is false when voices array is empty', () => {
+    const { result } = renderHook(() => useSoundscape([], []));
+    expect(result.current.allMuted).toBe(false);
+  });
+
+  it('loadedCount is 0 initially (no canplay event has fired)', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1, xcRec2], [obs1, obs2]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    expect(result.current.loadedCount).toBe(0);
+  });
+
+  it('loadedCount increases as canplay fires for each voice', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1, xcRec2], [obs1, obs2]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    expect(result.current.loadedCount).toBe(0);
+
+    act(() => { audioInstances[0].emit('canplay'); });
+    expect(result.current.loadedCount).toBe(1);
+
+    act(() => { audioInstances[1].emit('canplay'); });
+    expect(result.current.loadedCount).toBe(2);
+  });
+});
