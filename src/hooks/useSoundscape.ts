@@ -103,6 +103,7 @@ export function useSoundscape(
   const retryCountsRef = useRef<number[]>([]);
   const pendingEndedRef = useRef<boolean[]>([]);
   const isMutedRef = useRef<boolean[]>([]);
+  const endedHandlersRef = useRef<Array<(() => void) | undefined>>([]);
 
   const stopAll = useCallback(() => {
     timersRef.current.forEach(t => clearTimeout(t));
@@ -131,13 +132,23 @@ export function useSoundscape(
 
     if (!pendingEndedRef.current[index]) {
       pendingEndedRef.current[index] = true;
-      audio.addEventListener('ended', () => {
+
+      // Remove any stale ended handler from a previous voice at this slot
+      const oldHandler = endedHandlersRef.current[index];
+      if (oldHandler) {
+        audio.removeEventListener('ended', oldHandler);
+      }
+
+      const handler = () => {
         pendingEndedRef.current[index] = false;
+        endedHandlersRef.current[index] = undefined;
         setVoices(v => v.map((voice, i) => i === index ? { ...voice, isActive: false } : voice));
         if (!isPlayingRef.current || isMutedRef.current[index]) return;
         const delay = applyJitter(intervalsRef.current[index] ?? MAX_INTERVAL_MS);
         timersRef.current.push(setTimeout(() => startVoice(index), delay));
-      }, { once: true } as AddEventListenerOptions);
+      };
+      endedHandlersRef.current[index] = handler;
+      audio.addEventListener('ended', handler, { once: true } as AddEventListenerOptions);
     }
   }, []);
 
@@ -151,6 +162,7 @@ export function useSoundscape(
     stopAll();
     pendingEndedRef.current = [];
     isMutedRef.current = [];
+    endedHandlersRef.current = [];
     let cancelled = false;
 
     const allCandidates = selectVoices(recordings, recentObs, MAX_VOICES + SPARE_VOICES);
@@ -193,7 +205,15 @@ export function useSoundscape(
 
     function replaceFailedVoice(idx: number) {
       const a = audioRefs.current[idx];
-      if (a) { a.src = ''; a.load(); }
+      if (a) {
+        // Remove any stale ended listener before discarding this audio element
+        const oldEnded = endedHandlersRef.current[idx];
+        if (oldEnded) {
+          a.removeEventListener('ended', oldEnded);
+          endedHandlersRef.current[idx] = undefined;
+        }
+        a.src = ''; a.load();
+      }
 
       const spare = sparePoolRef.current.shift();
       if (!spare) {
