@@ -440,3 +440,76 @@ describe('useSoundscape — XC retry + voice replacement', () => {
     expect(vi.getTimerCount()).toBe(timerCountBefore + 1); // still only one timer
   });
 });
+
+describe('useSoundscape — mute', () => {
+  it('toggleMute mutes a voice: stops audio and marks it isMuted', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); }); // play
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    act(() => { result.current.toggleMute(0); });
+
+    expect(result.current.voices[0].isMuted).toBe(true);
+    expect(result.current.voices[0].isActive).toBe(false);
+    expect(audioInstances[0].pause).toHaveBeenCalled();
+  });
+
+  it('muted voice does not restart after its audio ends', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); }); // play
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    act(() => { result.current.toggleMute(0); }); // mute
+
+    const timerCountBefore = vi.getTimerCount();
+    act(() => { audioInstances[0].emit('ended'); });
+    expect(vi.getTimerCount()).toBe(timerCountBefore); // no new timer scheduled
+  });
+
+  it('toggleMute unmutes and resumes playback', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); }); // play
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    act(() => { result.current.toggleMute(0); }); // mute
+    act(() => { result.current.toggleMute(0); }); // unmute
+
+    expect(result.current.voices[0].isMuted).toBe(false);
+    expect(audioInstances[0].play).toHaveBeenCalledTimes(2); // initial play + resume on unmute
+  });
+
+  it('master play clears all mutes', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); }); // play
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    act(() => { result.current.toggleMute(0); }); // mute
+    expect(result.current.voices[0].isMuted).toBe(true);
+
+    act(() => { result.current.toggle(); }); // pause (master)
+    act(() => { result.current.toggle(); }); // play (master) — clears mutes
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    expect(result.current.voices[0].isMuted).toBe(false);
+  });
+
+  it('muted voice is skipped by startVoice stagger timer', async () => {
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.toggle(); }); // play — stagger timer scheduled but not yet fired
+    act(() => { result.current.toggleMute(0); }); // mute BEFORE stagger fires
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(INITIAL_STAGGER_MS + 100); });
+
+    expect(audioInstances[0].play).not.toHaveBeenCalled();
+  });
+});

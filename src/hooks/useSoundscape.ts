@@ -24,6 +24,7 @@ export interface SoundscapeVoice {
   isActive: boolean;
   isLoading: boolean;
   isFailed: boolean;
+  isMuted: boolean;
   photo: BirdPhoto | null;
 }
 
@@ -31,6 +32,7 @@ export interface UseSoundscapeResult {
   voices: SoundscapeVoice[];
   isPlaying: boolean;
   toggle: () => void;
+  toggleMute: (index: number) => void;
 }
 
 const qualityRank: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 };
@@ -99,6 +101,7 @@ export function useSoundscape(
   const sparePoolRef = useRef<{ recording: XCRecording; sciName: string; howMany: number }[]>([]);
   const retryCountsRef = useRef<number[]>([]);
   const pendingEndedRef = useRef<boolean[]>([]);
+  const isMutedRef = useRef<boolean[]>([]);
 
   const stopAll = useCallback(() => {
     timersRef.current.forEach(t => clearTimeout(t));
@@ -120,7 +123,7 @@ export function useSoundscape(
 
   const startVoice = useCallback((index: number) => {
     const audio = audioRefs.current[index];
-    if (!audio || !isPlayingRef.current) return;
+    if (!audio || !isPlayingRef.current || isMutedRef.current[index]) return;
 
     void audio.play();
     setVoices(v => v.map((voice, i) => i === index ? { ...voice, isActive: true } : voice));
@@ -130,7 +133,7 @@ export function useSoundscape(
       audio.addEventListener('ended', () => {
         pendingEndedRef.current[index] = false;
         setVoices(v => v.map((voice, i) => i === index ? { ...voice, isActive: false } : voice));
-        if (!isPlayingRef.current) return;
+        if (!isPlayingRef.current || isMutedRef.current[index]) return;
         const delay = applyJitter(intervalsRef.current[index] ?? MAX_INTERVAL_MS);
         timersRef.current.push(setTimeout(() => startVoice(index), delay));
       }, { once: true } as AddEventListenerOptions);
@@ -146,6 +149,7 @@ export function useSoundscape(
   useEffect(() => {
     stopAll();
     pendingEndedRef.current = [];
+    isMutedRef.current = [];
     let cancelled = false;
 
     const allCandidates = selectVoices(recordings, recentObs, MAX_VOICES + SPARE_VOICES);
@@ -177,6 +181,7 @@ export function useSoundscape(
         isActive: false,
         isLoading: true,
         isFailed: false,
+        isMuted: false,
         photo: null,
       })),
     );
@@ -200,6 +205,7 @@ export function useSoundscape(
       retryCountsRef.current[idx] = 0;
       intervalsRef.current[idx] = MAX_INTERVAL_MS;
       pendingEndedRef.current[idx] = false;
+      isMutedRef.current[idx] = false;
 
       setVoices(v => v.map((voice, vi) => vi === idx ? {
         recording: spare.recording,
@@ -209,6 +215,7 @@ export function useSoundscape(
         isActive: false,
         isLoading: true,
         isFailed: false,
+        isMuted: false,
         photo: null,
       } : voice));
 
@@ -273,10 +280,29 @@ export function useSoundscape(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordingsKey, recentObsKey, stopAll]);
 
+  const toggleMute = useCallback((index: number) => {
+    const audio = audioRefs.current[index];
+    if (!audio) return;
+
+    if (!isMutedRef.current[index]) {
+      isMutedRef.current[index] = true;
+      audio.pause();
+      audio.currentTime = 0;
+      setVoices(v => v.map((voice, i) => i === index ? { ...voice, isMuted: true, isActive: false } : voice));
+    } else {
+      isMutedRef.current[index] = false;
+      setVoices(v => v.map((voice, i) => i === index ? { ...voice, isMuted: false } : voice));
+      if (isPlayingRef.current) startVoice(index);
+    }
+  }, [startVoice]);
+
   const toggle = useCallback(() => {
     if (isPlayingRef.current) {
       pauseAll();
     } else {
+      const count = audioRefs.current.length;
+      isMutedRef.current = new Array(count).fill(false);
+      setVoices(v => v.map(voice => ({ ...voice, isMuted: false })));
       isPlayingRef.current = true;
       setIsPlaying(true);
       audioRefs.current.forEach((_, i) => {
@@ -298,5 +324,5 @@ export function useSoundscape(
     };
   }, []);
 
-  return { voices, isPlaying, toggle };
+  return { voices, isPlaying, toggle, toggleMute };
 }
