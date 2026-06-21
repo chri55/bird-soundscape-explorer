@@ -18,6 +18,7 @@ function makeVoice(overrides: Partial<SoundscapeVoice> = {}): SoundscapeVoice {
     isActive: false,
     isLoading: false,
     isFailed: false,
+    isMuted: false,
     photo: null,
     ...overrides,
   };
@@ -25,22 +26,22 @@ function makeVoice(overrides: Partial<SoundscapeVoice> = {}): SoundscapeVoice {
 
 describe('SoundscapeGrid', () => {
   it('renders nothing when voices is empty', () => {
-    const { container } = render(<SoundscapeGrid voices={[]} />);
+    const { container } = render(<SoundscapeGrid voices={[]} onToggleMute={vi.fn()} />);
     expect(container.firstChild).toBeNull();
   });
 
   it('has grid-cols-8 class on the container', () => {
-    const { container } = render(<SoundscapeGrid voices={[makeVoice()]} />);
+    const { container } = render(<SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} />);
     expect(container.querySelector('.grid-cols-8')).toBeTruthy();
   });
 
   it('active card has ring-green-400 class', () => {
-    const { container } = render(<SoundscapeGrid voices={[makeVoice({ isActive: true })]} />);
+    const { container } = render(<SoundscapeGrid voices={[makeVoice({ isActive: true })]} onToggleMute={vi.fn()} />);
     expect(container.querySelector('.ring-green-400')).toBeTruthy();
   });
 
   it('inactive card has brightness-50 class', () => {
-    const { container } = render(<SoundscapeGrid voices={[makeVoice({ isActive: false })]} />);
+    const { container } = render(<SoundscapeGrid voices={[makeVoice({ isActive: false })]} onToggleMute={vi.fn()} />);
     expect(container.querySelector('.brightness-50')).toBeTruthy();
   });
 
@@ -48,33 +49,33 @@ describe('SoundscapeGrid', () => {
     const voice = makeVoice({
       photo: { photoUrl: 'https://photo.jpg', largeUrl: 'https://photo-l.jpg', attribution: '© x', licenseCode: 'cc-by' },
     });
-    render(<SoundscapeGrid voices={[voice]} />);
+    render(<SoundscapeGrid voices={[voice]} onToggleMute={vi.fn()} />);
     expect(screen.getByRole('img')).toHaveAttribute('src', 'https://photo.jpg');
   });
 
   it('shows placeholder text (not an img) when photo is null and not loading', () => {
-    render(<SoundscapeGrid voices={[makeVoice({ photo: null, isLoading: false })]} />);
+    render(<SoundscapeGrid voices={[makeVoice({ photo: null, isLoading: false })]} onToggleMute={vi.fn()} />);
     expect(screen.queryByRole('img')).toBeNull();
     expect(screen.getAllByText('American Robin').length).toBeGreaterThan(0);
   });
 
   it('shows skeleton when isLoading is true', () => {
-    const { container } = render(<SoundscapeGrid voices={[makeVoice({ isLoading: true })]} />);
+    const { container } = render(<SoundscapeGrid voices={[makeVoice({ isLoading: true })]} onToggleMute={vi.fn()} />);
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
   });
 
   it('hover card contains scientific name', () => {
-    const { container } = render(<SoundscapeGrid voices={[makeVoice()]} />);
+    const { container } = render(<SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} />);
     expect(container.textContent).toContain('Turdus migratorius');
   });
 
   it('hover card contains recordist name', () => {
-    const { container } = render(<SoundscapeGrid voices={[makeVoice()]} />);
+    const { container } = render(<SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} />);
     expect(container.textContent).toContain('Jane');
   });
 
   it('hover card is initially hidden (opacity-0 or invisible class)', () => {
-    const { container } = render(<SoundscapeGrid voices={[makeVoice()]} />);
+    const { container } = render(<SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} />);
     const hoverCard = container.querySelector('.opacity-0, .invisible');
     expect(hoverCard).toBeTruthy();
   });
@@ -90,8 +91,18 @@ describe('SoundscapeGrid', () => {
       makeVoice({ isFailed: true }),
       makeVoice({ recording: rec2, sciName: 'Parus major', isFailed: false }),
     ];
-    const { container } = render(<SoundscapeGrid voices={voices} />);
+    const { container } = render(<SoundscapeGrid voices={voices} onToggleMute={vi.fn()} />);
     expect(container.textContent).not.toContain('American Robin');
     expect(container.textContent).toContain('Great Tit');
+  });
+
+  it('muted voice shows volume-xmark icon always visible (not opacity-0)', () => {
+    const { container } = render(
+      <SoundscapeGrid voices={[makeVoice({ isMuted: true })]} onToggleMute={vi.fn()} />,
+    );
+    expect(container.querySelector('svg[data-icon="volume-xmark"]')).toBeTruthy();
+    const muteBtn = container.querySelector('button[aria-label="Unmute bird"]');
+    expect(muteBtn).toBeTruthy();
+    expect(muteBtn?.className).not.toContain('opacity-0');
   });
 });

@@ -134,7 +134,7 @@ export default function MapView() {
             onToggle={soundscape.toggle}
           />
           <div className="flex-1 min-w-0 relative z-10">
-            <SoundscapeGrid voices={soundscape.voices} />
+            <SoundscapeGrid voices={soundscape.voices} onToggleMute={soundscape.toggleMute} />
           </div>
         </div>
       )}
