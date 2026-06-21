@@ -94,7 +94,7 @@ const dateStr = new Date(year, (month ?? 1) - 1, day ?? 1)
 
 - [ ] **Step 1: Write failing test for the new function**
 
-  Add to `src/utils/species.test.ts`:
+  Update the existing import from `'./species'` in `src/utils/species.test.ts` to also include `formatObsDate`, then add the following `describe` block:
 
   ```typescript
   import { deduplicateObs, bestRecording, formatObsDate } from './species';
