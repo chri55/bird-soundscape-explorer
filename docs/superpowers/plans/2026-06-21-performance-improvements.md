@@ -157,7 +157,6 @@
     // ... render the card JSX (move existing per-voice div here)
     return (
       <div
-        key={voice.recording.id}
         className={`relative group rounded-lg ring-2 transition-all duration-300 ${
           voice.isActive ? 'ring-green-400' : 'ring-transparent'
         }`}
@@ -393,7 +392,7 @@ The cleanest approach that avoids a large restructure is to set recordings from 
     } catch {
       setIsLoading(false);
     }
-  }, []);
+  }, []); // stable refs and module-level constants — empty deps intentional
   ```
 
   Note: remove the `finally { setIsLoading(false); }` block and inline `setIsLoading(false)` before gap-fill so the loading spinner clears as soon as the first batch arrives.
