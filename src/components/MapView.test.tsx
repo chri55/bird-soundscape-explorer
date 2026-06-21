@@ -21,7 +21,7 @@ vi.mock('react-leaflet', () => ({
   TileLayer: () => null,
   Marker: () => null,
   useMapEvents: (handlers: { click?: (e: unknown) => void }) => { (globalThis as Record<string, unknown>)._mapClick = handlers.click; return null; },
-  useMap: () => ({ addLayer: vi.fn(), removeLayer: vi.fn() }),
+  useMap: vi.fn(() => ({ addLayer: vi.fn(), removeLayer: vi.fn(), flyTo: vi.fn() })),
 }));
 
 vi.mock('leaflet.markercluster', () => ({}));

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -20,6 +20,7 @@ import { SoundscapeGrid } from './SoundscapeGrid';
 import { SoundscapeControls } from './SoundscapeControls';
 import { useNpsParks } from '../hooks/useNpsParks';
 import { ParkClusterLayer } from './ParkClusterLayer';
+import { ParkSearch } from './ParkSearch';
 
 const defaultIcon = L.icon({
   iconUrl: markerIconUrl,
@@ -45,12 +46,21 @@ function PinHandler({ onPin }: { onPin: (pos: LatLng) => void }) {
   return null;
 }
 
+function FlyToController({ target }: { target: LatLng | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (target) map.flyTo([target.lat, target.lng], 10);
+  }, [map, target]);
+  return null;
+}
+
 export default function MapView() {
   const [pin, setPin] = useState<LatLng | null>(null);
   const [notableObs, setNotableObs] = useState<EBirdObservation[]>([]);
   const [recentObs, setRecentObs] = useState<EBirdObservation[]>([]);
   const [recordings, setRecordings] = useState<XCRecording[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [flyToTarget, setFlyToTarget] = useState<LatLng | null>(null);
 
   const lastFetchRef = useRef<LatLng | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -93,6 +103,14 @@ export default function MapView() {
     [fetchForPin],
   );
 
+  const handleParkSearch = useCallback(
+    (pos: LatLng) => {
+      handlePin(pos);
+      setFlyToTarget(pos);
+    },
+    [handlePin],
+  );
+
   useEffect(() => {
     return () => {
       if (debounceRef.current !== null) clearTimeout(debounceRef.current);
@@ -119,6 +137,9 @@ export default function MapView() {
         />
 
         <div className="flex-1 relative z-0 min-h-0">
+          <div className="absolute top-3 left-3 z-[1000] w-64">
+            <ParkSearch parks={parks} onSelect={handleParkSearch} />
+          </div>
           <MapContainer center={[39.5, -98.35]} zoom={4} className="w-full h-full cursor-crosshair">
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -127,6 +148,7 @@ export default function MapView() {
             <PinHandler onPin={handlePin} />
             {pin && <Marker position={[pin.lat, pin.lng]} icon={defaultIcon} />}
             <ParkClusterLayer parks={parks} onParkClick={handlePin} />
+            <FlyToController target={flyToTarget} />
           </MapContainer>
         </div>
       </div>
