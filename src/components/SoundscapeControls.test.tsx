@@ -25,4 +25,20 @@ describe('SoundscapeControls', () => {
     fireEvent.click(screen.getByRole('button'));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
+
+  it('renders a Font Awesome play icon (not emoji ▶) when paused', () => {
+    const { container } = render(
+      <SoundscapeControls isPlaying={false} voiceCount={1} onToggle={vi.fn()} />,
+    );
+    expect(container.querySelector('svg[data-icon="play"]')).toBeTruthy();
+    expect(container.querySelector('button')?.textContent?.trim()).not.toBe('▶');
+  });
+
+  it('renders a Font Awesome pause icon (not emoji ⏸) when playing', () => {
+    const { container } = render(
+      <SoundscapeControls isPlaying={true} voiceCount={1} onToggle={vi.fn()} />,
+    );
+    expect(container.querySelector('svg[data-icon="pause"]')).toBeTruthy();
+    expect(container.querySelector('button')?.textContent?.trim()).not.toBe('⏸');
+  });
 });
