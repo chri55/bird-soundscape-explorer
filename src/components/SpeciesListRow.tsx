@@ -1,17 +1,34 @@
 import type { JSX } from 'react';
-import type { EBirdObservation } from '../api/ebird';
+import type { DeduplicatedObs } from '../utils/species';
 
 export interface SpeciesListRowProps {
-  obs: EBirdObservation;
+  obs: DeduplicatedObs;
   isNotable: boolean;
   onClick: () => void;
 }
 
+function parseDatePart(dt: string): Date {
+  const [year, month, day] = dt.slice(0, 10).split('-').map(Number);
+  return new Date(year, (month ?? 1) - 1, day ?? 1);
+}
+
 export function SpeciesListRow({ obs, isNotable, onClick }: SpeciesListRowProps): JSX.Element {
-  const datePart = obs.obsDt.split(' ')[0] ?? obs.obsDt;
-  const [year, month, day] = datePart.split('-').map(Number);
-  const dateStr = new Date(year, (month ?? 1) - 1, day ?? 1)
-    .toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const firstDate = parseDatePart(obs.firstObsDt);
+  const lastDate = parseDatePart(obs.obsDt);
+  const sameDay = obs.firstObsDt.slice(0, 10) === obs.obsDt.slice(0, 10);
+
+  let dateStr: string;
+  if (sameDay) {
+    dateStr = lastDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  } else if (firstDate.getFullYear() === lastDate.getFullYear()) {
+    const first = firstDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const last = lastDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    dateStr = `${first} – ${last}`;
+  } else {
+    const first = firstDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const last = lastDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    dateStr = `${first} – ${last}`;
+  }
 
   return (
     <button
@@ -32,7 +49,7 @@ export function SpeciesListRow({ obs, isNotable, onClick }: SpeciesListRowProps)
         )}
         {isNotable && (
           <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-            Rare
+            Notable
           </span>
         )}
       </div>

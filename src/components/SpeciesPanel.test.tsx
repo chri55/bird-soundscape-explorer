@@ -31,7 +31,7 @@ describe('SpeciesPanel', () => {
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 
-  it('renders Rarest Sightings section when notableObs present', () => {
+  it('renders Notable Sightings section when notableObs present', () => {
     render(
       <SpeciesPanel
         notableObs={[makeObs('Snow Bunting', 1)]}
@@ -40,7 +40,7 @@ describe('SpeciesPanel', () => {
         isLoading={false}
       />,
     );
-    expect(screen.getByText('Rarest Sightings')).toBeInTheDocument();
+    expect(screen.getByText('Notable Sightings')).toBeInTheDocument();
     expect(screen.getByText('Snow Bunting')).toBeInTheDocument();
   });
 
@@ -95,7 +95,7 @@ describe('SpeciesPanel', () => {
     );
     fireEvent.click(screen.getByText('Snow Bunting'));
     fireEvent.click(screen.getByText(/Back/));
-    expect(screen.getByText('Rarest Sightings')).toBeInTheDocument();
+    expect(screen.getByText('Notable Sightings')).toBeInTheDocument();
   });
 
   it('shows filter input when species are loaded', () => {

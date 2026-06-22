@@ -56,7 +56,7 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
       ) : isLoading ? (
         <div className="p-4 space-y-2">
           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide py-2">
-            Rarest Sightings
+            Notable Sightings
           </div>
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-16 w-full" />
@@ -96,7 +96,7 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
             <section>
               <div className="sticky top-0 bg-white px-4 py-2 border-b border-gray-100">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  Rarest Sightings
+                  Notable Sightings
                 </h3>
               </div>
               {filteredNotable.length === 0 ? (

@@ -1,11 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SpeciesListRow } from './SpeciesListRow';
-import type { EBirdObservation } from '../api/ebird';
+import type { DeduplicatedObs } from '../utils/species';
 
-const obs: EBirdObservation = {
+const obs: DeduplicatedObs = {
   speciesCode: 'amerob', comName: 'American Robin',
   sciName: 'Turdus migratorius', locName: 'Central Park',
-  obsDt: '2024-06-15 08:00', howMany: 12,
+  obsDt: '2024-06-15 08:00', firstObsDt: '2024-06-15 08:00', howMany: 12,
   lat: 40.78, lng: -73.97, obsValid: true, obsReviewed: false, locationPrivate: false,
 };
 
@@ -30,14 +30,14 @@ describe('SpeciesListRow', () => {
     expect(screen.queryByText(/seen/)).toBeNull();
   });
 
-  it('shows Rare pill when isNotable', () => {
+  it('shows Notable pill when isNotable', () => {
     render(<SpeciesListRow obs={obs} isNotable={true} onClick={vi.fn()} />);
-    expect(screen.getByText('Rare')).toBeInTheDocument();
+    expect(screen.getByText('Notable')).toBeInTheDocument();
   });
 
-  it('does not show Rare pill when not notable', () => {
+  it('does not show Notable pill when not notable', () => {
     render(<SpeciesListRow obs={obs} isNotable={false} onClick={vi.fn()} />);
-    expect(screen.queryByText('Rare')).toBeNull();
+    expect(screen.queryByText('Notable')).toBeNull();
   });
 
   it('calls onClick when the row is clicked', () => {
@@ -55,5 +55,21 @@ describe('SpeciesListRow', () => {
   it('button has type="button"', () => {
     render(<SpeciesListRow obs={obs} isNotable={false} onClick={vi.fn()} />);
     expect(screen.getByRole('button')).toHaveAttribute('type', 'button');
+  });
+
+  it('shows single date when firstObsDt equals obsDt', () => {
+    render(<SpeciesListRow obs={{ ...obs, obsDt: '2024-06-15 08:00', firstObsDt: '2024-06-15 08:00' }} isNotable={false} onClick={vi.fn()} />);
+    expect(screen.getByText(/Jun 15, 2024/)).toBeInTheDocument();
+    expect(screen.queryByText(/–/)).toBeNull();
+  });
+
+  it('shows date range with year only on last date when same year', () => {
+    render(<SpeciesListRow obs={{ ...obs, obsDt: '2024-06-15 08:00', firstObsDt: '2024-06-01 08:00' }} isNotable={false} onClick={vi.fn()} />);
+    expect(screen.getByText(/Jun 1 – Jun 15, 2024/)).toBeInTheDocument();
+  });
+
+  it('shows date range with year on both dates when different years', () => {
+    render(<SpeciesListRow obs={{ ...obs, obsDt: '2024-01-03 08:00', firstObsDt: '2023-12-28 08:00' }} isNotable={false} onClick={vi.fn()} />);
+    expect(screen.getByText(/Dec 28, 2023 – Jan 3, 2024/)).toBeInTheDocument();
   });
 });
