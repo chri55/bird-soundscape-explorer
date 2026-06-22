@@ -19,6 +19,7 @@ function makeVoice(overrides: Partial<SoundscapeVoice> = {}): SoundscapeVoice {
     isLoading: false,
     isFailed: false,
     isMuted: false,
+    isRerolling: false,
     photo: null,
     ...overrides,
   };

@@ -30,6 +30,7 @@ export interface SoundscapeVoice {
   isLoading: boolean;
   isFailed: boolean;
   isMuted: boolean;
+  isRerolling: boolean;
   photo: BirdPhoto | null;
 }
 
@@ -212,6 +213,7 @@ export function useSoundscape(
         isLoading: true,
         isFailed: false,
         isMuted: false,
+        isRerolling: false,
         photo: null,
       })),
     );
@@ -254,6 +256,7 @@ export function useSoundscape(
         isLoading: true,
         isFailed: false,
         isMuted: false,
+        isRerolling: false,
         photo: null,
       } : voice));
 
@@ -368,9 +371,10 @@ export function useSoundscape(
     isMutedRef.current[index]   = false;
     pendingEndedRef.current[index] = false;
 
+    // Mark slot as rerolling (keeps old bird visible, spins the dice button)
     setVoices(v => {
       const newVoices = v.map((voice, i) =>
-        i === index ? { ...voice, isLoading: true, isActive: false, isFailed: false } : voice,
+        i === index ? { ...voice, isRerolling: true, isActive: false } : voice,
       );
       voicesRef.current = newVoices;
       return newVoices;
@@ -406,47 +410,50 @@ export function useSoundscape(
           const best = bestRecording(candidate.sciName, response.recordings);
           if (best) {
             const newAudio = new Audio(best.file);
-            audioRefs.current[index]       = newAudio;
-            retryCountsRef.current[index]  = 0;
-            intervalsRef.current[index]    = MAX_INTERVAL_MS;
+            audioRefs.current[index]      = newAudio;
+            retryCountsRef.current[index] = 0;
+            intervalsRef.current[index]   = MAX_INTERVAL_MS;
 
-            newAudio.addEventListener('canplay', () => {
-              setVoices(v => v.map((voice, i) =>
-                i === index ? { ...voice, isLoading: false } : voice,
-              ));
-              if (isPlayingRef.current && !isMutedRef.current[index]) startVoice(index);
-            }, { once: true } as AddEventListenerOptions);
-
-            newAudio.addEventListener('error', () => {
-              setVoices(v => v.map((voice, i) =>
-                i === index ? { ...voice, isFailed: true, isLoading: false } : voice,
-              ));
-            }, { once: true } as AddEventListenerOptions);
-
-            const photo = await fetchBirdPhoto(candidate.sciName).catch(() => null);
+            // Fetch photo and wait for audio canplay in parallel — both must
+            // complete before we swap the card so there's no layout shift
+            const [audioReady, photo] = await Promise.all([
+              new Promise<boolean>(resolve => {
+                newAudio.addEventListener('canplay', () => resolve(true), { once: true } as AddEventListenerOptions);
+                newAudio.addEventListener('error',   () => resolve(false), { once: true } as AddEventListenerOptions);
+              }),
+              fetchBirdPhoto(candidate.sciName).catch(() => null),
+            ]);
 
             if (rerollSeqRef.current[index] !== mySeq) {
-              newAudio.pause();
-              newAudio.src = '';
-              newAudio.load();
+              newAudio.pause(); newAudio.src = ''; newAudio.load();
               return;
             }
 
+            if (!audioReady) {
+              // Audio failed — try next candidate
+              newAudio.src = ''; newAudio.load();
+              addToBlocklist(candidate.sciName);
+              continue;
+            }
+
+            // Atomic swap: old card content replaced in a single render
             setVoices(v => {
               const newVoices = v.map((voice, i) => i === index ? {
-                recording: best,
-                sciName:   candidate.sciName,
-                howMany:   candidate.howMany ?? 1,
+                recording:  best,
+                sciName:    candidate.sciName,
+                howMany:    candidate.howMany ?? 1,
                 intervalMs: MAX_INTERVAL_MS,
-                isActive:  false,
-                isLoading: true,
-                isFailed:  false,
-                isMuted:   false,
-                photo:     photo ?? null,
+                isActive:   false,
+                isLoading:  false,
+                isFailed:   false,
+                isMuted:    false,
+                isRerolling: false,
+                photo:      photo ?? null,
               } : voice);
               voicesRef.current = newVoices;
               return newVoices;
             });
+            if (isPlayingRef.current && !isMutedRef.current[index]) startVoice(index);
             return;
           } else {
             addToBlocklist(candidate.sciName);
@@ -458,7 +465,7 @@ export function useSoundscape(
       // All attempts exhausted
       if (rerollSeqRef.current[index] !== mySeq) return;
       setVoices(v => v.map((voice, i) =>
-        i === index ? { ...voice, isFailed: true, isLoading: false } : voice,
+        i === index ? { ...voice, isFailed: true, isLoading: false, isRerolling: false } : voice,
       ));
     })();
   }, [startVoice]);

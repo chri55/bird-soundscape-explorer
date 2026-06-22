@@ -48,14 +48,17 @@ export function SoundscapeGrid({ voices, onToggleMute, onReroll }: SoundscapeGri
               </div>
             </div>
 
-            {/* Reroll button */}
+            {/* Reroll button — stays visible and spins while fetching new bird */}
             <button
               type="button"
               onClick={e => { e.stopPropagation(); onReroll(i); }}
               aria-label="Reroll bird"
-              className="absolute top-1 left-1 z-20 w-6 h-6 flex items-center justify-center rounded text-white bg-black/50 hover:bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+              disabled={voice.isRerolling}
+              className={`absolute top-1 left-1 z-20 w-6 h-6 flex items-center justify-center rounded text-white bg-black/50 hover:bg-black/70 transition-opacity duration-150 ${
+                voice.isRerolling ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              }`}
             >
-              <FontAwesomeIcon icon={faDice} className="text-xs" />
+              <FontAwesomeIcon icon={faDice} className={`text-xs${voice.isRerolling ? ' fa-spin' : ''}`} />
             </button>
 
             {/* Mute button */}

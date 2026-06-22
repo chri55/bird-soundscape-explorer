@@ -640,7 +640,7 @@ describe('useSoundscape — mute all and loaded count', () => {
 });
 
 describe('rerollVoice', () => {
-  it('sets slot to isLoading:true immediately on reroll', async () => {
+  it('sets slot to isRerolling:true immediately on reroll', async () => {
     vi.mocked(fetchRecordings).mockImplementation(() => new Promise(() => {}));
     // notableObs provides a candidate distinct from the current voice (obs1 = Turdus migratorius)
     const notableObs = [makeObs('Parus major', 5)];
@@ -649,7 +649,7 @@ describe('rerollVoice', () => {
 
     act(() => { result.current.rerollVoice(0); });
 
-    expect(result.current.voices[0].isLoading).toBe(true);
+    expect(result.current.voices[0].isRerolling).toBe(true);
     expect(result.current.voices[0].isActive).toBe(false);
   });
 
@@ -681,7 +681,12 @@ describe('rerollVoice', () => {
     const { result } = renderHook(() => useSoundscape([xcRec1], [obs1], notableObs));
     await act(async () => { await vi.runAllTimersAsync(); });
 
+    // Kick off reroll; fetchRecordings resolves immediately so the new Audio
+    // for Parus major is created and waiting for canplay after this act.
     await act(async () => { result.current.rerollVoice(0); });
+
+    // Emit canplay on the new audio to unblock the Promise.all atomic swap.
+    act(() => { audioInstances[audioInstances.length - 1]!.emit('canplay'); });
     await act(async () => { await vi.runAllTimersAsync(); });
 
     expect(result.current.voices[0].sciName).toBe('Parus major');
