@@ -52,7 +52,7 @@ describe('deduplicateObs', () => {
     expect(result[0].howMany).toBe(5);
   });
 
-  it('keeps comName, locName, obsDt from the first occurrence', () => {
+  it('keeps comName and locName from the first occurrence, sets obsDt to most recent', () => {
     const obs = [
       makeObs('Turdus migratorius', 5, { comName: 'American Robin', locName: 'Central Park', obsDt: '2024-01-01 08:00' }),
       makeObs('Turdus migratorius', 3, { comName: 'Other Name', locName: 'Other Park', obsDt: '2024-02-01 09:00' }),
@@ -60,7 +60,36 @@ describe('deduplicateObs', () => {
     const result = deduplicateObs(obs);
     expect(result[0].comName).toBe('American Robin');
     expect(result[0].locName).toBe('Central Park');
-    expect(result[0].obsDt).toBe('2024-01-01 08:00');
+    expect(result[0].obsDt).toBe('2024-02-01 09:00');
+    expect(result[0].firstObsDt).toBe('2024-01-01 08:00');
+  });
+
+  it('sets firstObsDt = obsDt for a single observation', () => {
+    const obs = [makeObs('Turdus migratorius', 5, { obsDt: '2024-06-15 08:00' })];
+    const result = deduplicateObs(obs);
+    expect(result[0].firstObsDt).toBe('2024-06-15 08:00');
+    expect(result[0].obsDt).toBe('2024-06-15 08:00');
+  });
+
+  it('correctly identifies earliest and latest when second obs is earlier', () => {
+    const obs = [
+      makeObs('Turdus migratorius', 5, { obsDt: '2024-06-15 08:00' }),
+      makeObs('Turdus migratorius', 3, { obsDt: '2024-05-01 07:00' }),
+    ];
+    const result = deduplicateObs(obs);
+    expect(result[0].firstObsDt).toBe('2024-05-01 07:00');
+    expect(result[0].obsDt).toBe('2024-06-15 08:00');
+  });
+
+  it('correctly identifies min and max across three observations in non-sorted order', () => {
+    const obs = [
+      makeObs('Turdus migratorius', 1, { obsDt: '2024-06-10 08:00' }),
+      makeObs('Turdus migratorius', 1, { obsDt: '2024-06-01 08:00' }),
+      makeObs('Turdus migratorius', 1, { obsDt: '2024-06-20 08:00' }),
+    ];
+    const result = deduplicateObs(obs);
+    expect(result[0].firstObsDt).toBe('2024-06-01 08:00');
+    expect(result[0].obsDt).toBe('2024-06-20 08:00');
   });
 });
 

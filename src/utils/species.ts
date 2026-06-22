@@ -2,14 +2,25 @@ import type { EBirdObservation } from '../api/ebird';
 import type { XCRecording } from '../api/xeno-canto';
 import { qualityRank, typeScore } from './recording-quality';
 
-export function deduplicateObs(obs: EBirdObservation[]): EBirdObservation[] {
-  const seen = new Map<string, EBirdObservation>();
+export interface DeduplicatedObs extends EBirdObservation {
+  firstObsDt: string;
+}
+
+export function deduplicateObs(obs: EBirdObservation[]): DeduplicatedObs[] {
+  const seen = new Map<string, DeduplicatedObs>();
   for (const o of obs) {
     const existing = seen.get(o.sciName);
     if (!existing) {
-      seen.set(o.sciName, { ...o, howMany: o.howMany ?? 0 });
+      seen.set(o.sciName, { ...o, howMany: o.howMany ?? 0, firstObsDt: o.obsDt });
     } else {
-      seen.set(o.sciName, { ...existing, howMany: (existing.howMany ?? 0) + (o.howMany ?? 0) });
+      const isLater = o.obsDt.slice(0, 10) > existing.obsDt.slice(0, 10);
+      const isEarlier = o.obsDt.slice(0, 10) < existing.firstObsDt.slice(0, 10);
+      seen.set(o.sciName, {
+        ...existing,
+        howMany: (existing.howMany ?? 0) + (o.howMany ?? 0),
+        obsDt: isLater ? o.obsDt : existing.obsDt,
+        firstObsDt: isEarlier ? o.obsDt : existing.firstObsDt,
+      });
     }
   }
   return [...seen.values()];
