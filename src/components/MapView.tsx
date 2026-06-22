@@ -69,6 +69,7 @@ export default function MapView() {
   const [isLoading, setIsLoading] = useState(false);
   const [flyToTarget, setFlyToTarget] = useState<LatLng | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [selectedVoice, setSelectedVoice] = useState<SoundscapeVoice | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>('map');
   const { exclusions, excludedSciNames, addExclusion, removeExclusion } = useExclusionList();
@@ -135,13 +136,14 @@ export default function MapView() {
   return (
     <div className="flex flex-col h-screen">
       <header className="px-4 py-2 bg-green-800 text-white flex items-center gap-3 shrink-0">
-        <span className="text-lg font-semibold min-w-0 truncate">Bird Soundscape Explorer</span>
+        <span className="text-lg font-semibold min-w-0 truncate">Tweetr</span>
         {pin && (
           <span className="text-sm text-green-200 ml-auto whitespace-nowrap shrink-0">
             {pin.lat.toFixed(4)}, {pin.lng.toFixed(4)}
           </span>
         )}
         <button
+          ref={settingsButtonRef}
           type="button"
           aria-label="Open settings"
           onClick={() => setSettingsOpen(true)}
@@ -228,7 +230,7 @@ export default function MapView() {
       <MobileTabBar activeTab={mobileTab} onTabChange={setMobileTab} />
       <SettingsModal
         isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        onClose={() => { setSettingsOpen(false); settingsButtonRef.current?.focus(); }}
         availableObs={availableObs}
         exclusions={exclusions}
         onAddExclusion={addExclusion}

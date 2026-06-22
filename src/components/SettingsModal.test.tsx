@@ -125,4 +125,26 @@ describe('SettingsModal', () => {
       screen.getByRole('button', { name: 'Close settings' }).className.split(' '),
     ).toContain('p-2');
   });
+
+  it('modal div has role="dialog"', () => {
+    render(<SettingsModal {...baseProps} />);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('modal div has aria-modal="true"', () => {
+    render(<SettingsModal {...baseProps} />);
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
+  });
+
+  it('modal heading has id="settings-modal-title" and dialog has aria-labelledby pointing to it', () => {
+    render(<SettingsModal {...baseProps} />);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-labelledby', 'settings-modal-title');
+    expect(screen.getByRole('heading', { name: 'Settings' })).toHaveAttribute('id', 'settings-modal-title');
+  });
+
+  it('closes button receives focus when modal opens', () => {
+    render(<SettingsModal {...baseProps} />);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close settings' }));
+  });
 });

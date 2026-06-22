@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import type { EBirdObservation } from '../api/ebird';
@@ -23,6 +23,30 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const [query, setQuery] = useState('');
 
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+      'button, input, a[href], [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusable?.length) return;
+    focusable[0].focus();
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return;
+      const first = focusable![0];
+      const last = focusable![focusable!.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const excludedSciNames = new Set(exclusions.map(e => e.sciName));
@@ -41,11 +65,15 @@ export function SettingsModal({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-modal-title"
+        ref={modalRef}
         className="w-full h-full flex flex-col bg-gray-900 overflow-hidden md:h-auto md:max-w-lg md:mx-4 md:max-h-[90vh] md:rounded-xl"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 shrink-0">
-          <h2 className="text-white font-semibold">Settings</h2>
+          <h2 id="settings-modal-title" className="text-white font-semibold">Settings</h2>
           <button
             type="button"
             aria-label="Close settings"
