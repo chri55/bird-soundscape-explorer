@@ -100,4 +100,37 @@ describe('SoundscapeControls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mute' }));
     expect(onMuteAll).toHaveBeenCalledTimes(1);
   });
+
+  it('count text span has hidden class (hidden on mobile)', () => {
+    const { container } = render(
+      <SoundscapeControls {...defaultProps} isPlaying={false} voiceCount={3} loadedCount={3} />,
+    );
+    const span = Array.from(container.querySelectorAll('span')).find(
+      el => el.textContent?.includes('birds'),
+    );
+    expect(span?.className.split(' ')).toContain('hidden');
+  });
+
+  it('mute button has bg-red-200 class when allMuted is true', () => {
+    render(
+      <SoundscapeControls {...defaultProps} voiceCount={1} loadedCount={1} allMuted={true} />,
+    );
+    expect(screen.getByRole('button', { name: 'Unmute' }).className).toContain('bg-red-200');
+  });
+
+  it('mute button has bg-white class when allMuted is false', () => {
+    render(
+      <SoundscapeControls {...defaultProps} voiceCount={1} loadedCount={1} allMuted={false} />,
+    );
+    expect(screen.getByRole('button', { name: 'Mute' }).className).toContain('bg-white');
+  });
+
+  it('play button has bg-green-500 class when playing', () => {
+    render(
+      <SoundscapeControls {...defaultProps} isPlaying={true} voiceCount={1} loadedCount={1} />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Pause soundscape' }).className,
+    ).toContain('bg-green-500');
+  });
 });
