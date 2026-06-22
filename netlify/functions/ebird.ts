@@ -1,7 +1,7 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 
 export const handler: Handler = async (event: HandlerEvent) => {
-  const path = event.path.replace('/api/ebird', '');
+  const path = event.path.slice('/api/ebird'.length);
   const params = new URLSearchParams(
     Object.entries(event.queryStringParameters ?? {}) as [string, string][],
   );

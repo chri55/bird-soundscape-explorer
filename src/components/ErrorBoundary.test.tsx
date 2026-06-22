@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ErrorBoundary } from './ErrorBoundary';
 
 function Bomb(): never {
@@ -27,5 +27,15 @@ describe('ErrorBoundary', () => {
   it('renders a Refresh button in the fallback UI', () => {
     render(<ErrorBoundary><Bomb /></ErrorBoundary>);
     expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
+  });
+
+  it('calls window.location.reload when Refresh button is clicked', () => {
+    const originalLocation = window.location;
+    delete (window as any).location;
+    (window as any).location = { reload: vi.fn() };
+    render(<ErrorBoundary><Bomb /></ErrorBoundary>);
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    expect(window.location.reload).toHaveBeenCalled();
+    (window as any).location = originalLocation;
   });
 });
