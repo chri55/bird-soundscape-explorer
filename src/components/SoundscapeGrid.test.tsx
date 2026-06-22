@@ -200,4 +200,45 @@ describe('SoundscapeGrid', () => {
     const overlay = container.querySelector('.absolute.bottom-0');
     expect(overlay?.className.split(' ')).toContain('hidden');
   });
+
+  it('card wrapper has role="button" with bird name as accessible label', () => {
+    render(<SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} onReroll={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'American Robin' })).toBeInTheDocument();
+  });
+
+  it('card wrapper has tabIndex={0}', () => {
+    render(<SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} onReroll={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'American Robin' }).tabIndex).toBe(0);
+  });
+
+  it('card wrapper has aria-pressed="false" when not selected', () => {
+    render(<SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} onReroll={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'American Robin' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('pressing Enter on card wrapper fires selection callback', () => {
+    const onSelectedVoiceChange = vi.fn();
+    const voice = makeVoice();
+    render(
+      <SoundscapeGrid voices={[voice]} onToggleMute={vi.fn()} onReroll={vi.fn()} onSelectedVoiceChange={onSelectedVoiceChange} />,
+    );
+    fireEvent.keyDown(screen.getByRole('button', { name: 'American Robin' }), { key: 'Enter' });
+    expect(onSelectedVoiceChange).toHaveBeenCalledWith(voice);
+  });
+
+  it('pressing Space on card wrapper fires selection callback', () => {
+    const onSelectedVoiceChange = vi.fn();
+    const voice = makeVoice();
+    render(
+      <SoundscapeGrid voices={[voice]} onToggleMute={vi.fn()} onReroll={vi.fn()} onSelectedVoiceChange={onSelectedVoiceChange} />,
+    );
+    fireEvent.keyDown(screen.getByRole('button', { name: 'American Robin' }), { key: ' ' });
+    expect(onSelectedVoiceChange).toHaveBeenCalledWith(voice);
+  });
+
+  it('hover tooltip container has aria-hidden="true"', () => {
+    const { container } = render(<SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} onReroll={vi.fn()} />);
+    const tooltip = container.querySelector('.absolute.bottom-full');
+    expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+  });
 });

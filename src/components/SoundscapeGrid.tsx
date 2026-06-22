@@ -30,12 +30,20 @@ export function SoundscapeGrid({ voices, onToggleMute, onReroll, onSelectedVoice
         return (
           <div
             key={voice.recording.id}
+            role="button"
+            tabIndex={0}
+            aria-label={voice.recording.en}
+            aria-pressed={selectedIndex === i}
             onClick={() => handleCardClick(i)}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(i); } }}
             className={`relative group rounded-lg ring-2 transition-all duration-300 cursor-pointer ${
               voice.isActive ? 'ring-green-400' : 'ring-transparent'
             }`}
           >
-            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 w-48 bg-gray-900 rounded-lg overflow-hidden shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-150 pointer-events-none">
+            <div
+              aria-hidden="true"
+              className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 w-48 bg-gray-900 rounded-lg overflow-hidden shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-150 pointer-events-none"
+            >
               <div className="aspect-video bg-gray-800">
                 {voice.photo ? (
                   <img
