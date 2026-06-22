@@ -1,0 +1,27 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/ebird*"
+  to = "/.netlify/functions/ebird"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/xc*"
+  to = "/.netlify/functions/xc"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/nps*"
+  to = "/.netlify/functions/nps"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
