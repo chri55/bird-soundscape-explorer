@@ -3,7 +3,10 @@ import type { XCRecording } from '../api/xeno-canto';
 import type { EBirdObservation } from '../api/ebird';
 import type { BirdPhoto } from '../api/inat';
 import { fetchBirdPhoto } from '../api/inat';
+import { fetchRecordings } from '../api/xeno-canto';
 import { qualityRank, typeScore } from '../utils/recording-quality';
+import { bestRecording } from '../utils/species';
+import { readBlocklist, addToBlocklist } from '../utils/xc-blocklist';
 
 export const MIN_INTERVAL_MS = 3_000;
 export const MAX_INTERVAL_MS = 30_000;
@@ -16,6 +19,7 @@ export const SECONDARY_STAGGER_MAX_MS = 6_000;
 export const SPARE_VOICES = 4;
 export const MAX_AUDIO_RETRIES = 2;
 export const RETRY_DELAY_MS = 1_000;
+export const MAX_REROLL_ATTEMPTS = 5;
 
 export interface SoundscapeVoice {
   recording: XCRecording;
@@ -37,6 +41,7 @@ export interface UseSoundscapeResult {
   muteAll: () => void;
   allMuted: boolean;
   loadedCount: number;
+  rerollVoice: (index: number) => void;
 }
 
 export function selectVoices(
@@ -91,6 +96,7 @@ export function applyJitter(baseMs: number): number {
 export function useSoundscape(
   recordings: XCRecording[],
   recentObs: EBirdObservation[],
+  notableObs: EBirdObservation[] = [],
 ): UseSoundscapeResult {
   const [voices, setVoices] = useState<SoundscapeVoice[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -104,6 +110,9 @@ export function useSoundscape(
   const pendingEndedRef = useRef<boolean[]>([]);
   const isMutedRef = useRef<boolean[]>([]);
   const endedHandlersRef = useRef<Array<(() => void) | undefined>>([]);
+  const notableObsRef = useRef<EBirdObservation[]>(notableObs);
+  const recentObsRef  = useRef<EBirdObservation[]>(recentObs);
+  const voicesRef     = useRef<SoundscapeVoice[]>([]);
 
   const stopAll = useCallback(() => {
     timersRef.current.forEach(t => clearTimeout(t));
@@ -122,6 +131,10 @@ export function useSoundscape(
     setIsPlaying(false);
     setVoices(v => v.map(voice => ({ ...voice, isActive: false })));
   }, []);
+
+  useEffect(() => { notableObsRef.current = notableObs; }, [notableObs]);
+  useEffect(() => { recentObsRef.current  = recentObs;  }, [recentObs]);
+  useEffect(() => { voicesRef.current     = voices;     }, [voices]);
 
   const startVoice = useCallback((index: number) => {
     const audio = audioRefs.current[index];
@@ -335,6 +348,96 @@ export function useSoundscape(
     }
   }, [startVoice]);
 
+  const rerollVoice = useCallback((index: number) => {
+    // Stop and discard old audio for this slot
+    const oldAudio = audioRefs.current[index];
+    if (oldAudio) {
+      const oldEnded = endedHandlersRef.current[index];
+      if (oldEnded) {
+        oldAudio.removeEventListener('ended', oldEnded);
+        endedHandlersRef.current[index] = undefined;
+      }
+      oldAudio.pause();
+      oldAudio.src = '';
+      oldAudio.load();
+    }
+    isMutedRef.current[index]   = false;
+    pendingEndedRef.current[index] = false;
+
+    setVoices(v => v.map((voice, i) =>
+      i === index ? { ...voice, isLoading: true, isActive: false, isFailed: false } : voice,
+    ));
+
+    // Build candidate list — union of notableObs + recentObs, deduped, excluding
+    // species active in other slots and species in the 24h XC blocklist
+    const activeSciNames = new Set(
+      voicesRef.current.filter((_, i) => i !== index).map(v => v.sciName),
+    );
+    const blocklist = readBlocklist();
+    const seen = new Set<string>();
+    const allObs = [...notableObsRef.current, ...recentObsRef.current];
+    const candidates: EBirdObservation[] = [];
+    for (const obs of allObs) {
+      if (!seen.has(obs.sciName) && !activeSciNames.has(obs.sciName) && !blocklist.has(obs.sciName)) {
+        seen.add(obs.sciName);
+        candidates.push(obs);
+      }
+    }
+    candidates.sort((a, b) => (b.howMany ?? 0) - (a.howMany ?? 0));
+
+    void (async () => {
+      for (const candidate of candidates.slice(0, MAX_REROLL_ATTEMPTS)) {
+        const [genus, species] = candidate.sciName.split(' ');
+        try {
+          const response = await fetchRecordings(`gen:${genus} sp:${species}`);
+          const best = bestRecording(candidate.sciName, response.recordings);
+          if (best) {
+            const newAudio = new Audio(best.file);
+            audioRefs.current[index]       = newAudio;
+            retryCountsRef.current[index]  = 0;
+            intervalsRef.current[index]    = MAX_INTERVAL_MS;
+
+            newAudio.addEventListener('canplay', () => {
+              setVoices(v => v.map((voice, i) =>
+                i === index ? { ...voice, isLoading: false } : voice,
+              ));
+              if (isPlayingRef.current && !isMutedRef.current[index]) startVoice(index);
+            }, { once: true } as AddEventListenerOptions);
+
+            newAudio.addEventListener('error', () => {
+              setVoices(v => v.map((voice, i) =>
+                i === index ? { ...voice, isFailed: true, isLoading: false } : voice,
+              ));
+            }, { once: true } as AddEventListenerOptions);
+
+            const photo = await fetchBirdPhoto(candidate.sciName).catch(() => null);
+
+            setVoices(v => v.map((voice, i) => i === index ? {
+              recording: best,
+              sciName:   candidate.sciName,
+              howMany:   candidate.howMany ?? 1,
+              intervalMs: MAX_INTERVAL_MS,
+              isActive:  false,
+              isLoading: true,
+              isFailed:  false,
+              isMuted:   false,
+              photo:     photo ?? null,
+            } : voice));
+            return;
+          } else {
+            addToBlocklist(candidate.sciName);
+          }
+        } catch {
+          // Network error — skip this candidate without blocklisting it
+        }
+      }
+      // All attempts exhausted
+      setVoices(v => v.map((voice, i) =>
+        i === index ? { ...voice, isFailed: true, isLoading: false } : voice,
+      ));
+    })();
+  }, [startVoice]);
+
   const toggle = useCallback(() => {
     if (isPlayingRef.current) {
       pauseAll();
@@ -366,5 +469,5 @@ export function useSoundscape(
   const allMuted = voices.length > 0 && voices.every(v => v.isMuted);
   const loadedCount = voices.filter(v => !v.isLoading && !v.isFailed).length;
 
-  return { voices, isPlaying, toggle, toggleMute, muteAll, allMuted, loadedCount };
+  return { voices, isPlaying, toggle, toggleMute, muteAll, allMuted, loadedCount, rerollVoice };
 }

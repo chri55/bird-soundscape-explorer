@@ -9,8 +9,10 @@ import {
 } from './useSoundscape';
 import { renderHook, act } from '@testing-library/react';
 import { fetchBirdPhoto } from '../api/inat';
+import { fetchRecordings } from '../api/xeno-canto';
 
 vi.mock('../api/inat', () => ({ fetchBirdPhoto: vi.fn().mockResolvedValue(null) }));
+vi.mock('../api/xeno-canto', () => ({ fetchRecordings: vi.fn() }));
 
 function makeRec(overrides: Partial<XCRecording> = {}): XCRecording {
   return {
@@ -128,6 +130,10 @@ beforeEach(() => {
     constructor(src: string) { super(src); audioInstances.push(this); }
   });
   vi.useFakeTimers();
+  vi.mocked(fetchRecordings).mockResolvedValue({
+    numRecordings: '0', numSpecies: '0', page: 1, numPages: 1, recordings: [],
+  });
+  localStorage.clear();
 });
 
 afterEach(() => {
@@ -629,5 +635,68 @@ describe('useSoundscape — mute all and loaded count', () => {
 
     act(() => { audioInstances[1].emit('canplay'); });
     expect(result.current.loadedCount).toBe(2);
+  });
+});
+
+describe('rerollVoice', () => {
+  it('sets slot to isLoading:true immediately on reroll', async () => {
+    vi.mocked(fetchRecordings).mockImplementation(() => new Promise(() => {}));
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    act(() => { result.current.rerollVoice(0); });
+
+    expect(result.current.voices[0].isLoading).toBe(true);
+    expect(result.current.voices[0].isActive).toBe(false);
+  });
+
+  it('sets isFailed when all candidates return no XC recordings', async () => {
+    vi.mocked(fetchRecordings).mockResolvedValue({
+      numRecordings: '0', numSpecies: '0', page: 1, numPages: 1, recordings: [],
+    });
+    const notableObs = [makeObs('Parus major', 5)];
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1], notableObs));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    await act(async () => { result.current.rerollVoice(0); });
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    expect(result.current.voices[0].isFailed).toBe(true);
+  });
+
+  it('replaces voice sciName when a matching XC recording is found', async () => {
+    const parusMajorRec = makeRec({ gen: 'Parus', sp: 'major', id: '99', en: 'Great Tit' });
+    const notableObs = [makeObs('Parus major', 5)];
+    vi.mocked(fetchRecordings).mockImplementation((query: string) =>
+      Promise.resolve({
+        numRecordings: query.includes('Parus') ? '1' : '0',
+        numSpecies: query.includes('Parus') ? '1' : '0',
+        page: 1, numPages: 1,
+        recordings: query.includes('Parus') ? [parusMajorRec] : [],
+      }),
+    );
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1], notableObs));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    await act(async () => { result.current.rerollVoice(0); });
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    expect(result.current.voices[0].sciName).toBe('Parus major');
+  });
+
+  it('queries XC with gen:X sp:Y format derived from sciName', async () => {
+    const notableObs = [makeObs('Parus major', 5)];
+    vi.mocked(fetchRecordings).mockResolvedValue({
+      numRecordings: '0', numSpecies: '0', page: 1, numPages: 1, recordings: [],
+    });
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1], notableObs));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    await act(async () => { result.current.rerollVoice(0); });
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    expect(vi.mocked(fetchRecordings)).toHaveBeenCalledWith(
+      expect.stringMatching(/gen:Parus sp:major/),
+    );
   });
 });
