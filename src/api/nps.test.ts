@@ -9,7 +9,7 @@ beforeEach(() => {
 });
 
 describe('fetchParks', () => {
-  it('calls the NPS parks endpoint with limit=500 and api_key', async () => {
+  it('calls the NPS proxy endpoint with limit=500', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ data: [] }),
@@ -18,9 +18,7 @@ describe('fetchParks', () => {
     await fetchParks();
 
     const [url] = mockFetch.mock.calls[0] as [string];
-    expect(url).toContain('https://developer.nps.gov/api/v1/parks');
-    expect(url).toContain('limit=500');
-    expect(url).toContain('api_key=');
+    expect(url).toBe('/api/nps?limit=500');
   });
 
   it('returns only parks with non-empty latitude and longitude', async () => {

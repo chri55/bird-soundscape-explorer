@@ -1,4 +1,4 @@
-const BASE_URL = 'https://xeno-canto.org/api/3/recordings';
+const BASE_URL = '/api/xc';
 
 export interface XCRecording {
   id: string;
@@ -26,14 +26,8 @@ export interface XCResponse {
   recordings: XCRecording[];
 }
 
-function apiKey(): string {
-  return import.meta.env.VITE_XC_API_KEY as string;
-}
-
 export async function fetchRecordings(query: string): Promise<XCResponse> {
-  const key = apiKey();
-  const keyParam = key ? `&key=${key}` : '';
-  const url = `${BASE_URL}?query=${encodeURIComponent(query)}${keyParam}`;
+  const url = `${BASE_URL}?query=${encodeURIComponent(query)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Xeno-canto error ${res.status}: ${await res.text()}`);
   return res.json() as Promise<XCResponse>;

@@ -1,4 +1,4 @@
-const BASE_URL = 'https://api.ebird.org/v2';
+const BASE_URL = '/api/ebird';
 
 export interface EBirdObservation {
   speciesCode: string;
@@ -31,10 +31,6 @@ export interface EBirdTaxon {
   familySciName: string;
 }
 
-function ebirdHeaders(): HeadersInit {
-  return { 'x-ebirdapitoken': import.meta.env.VITE_EBIRD_API_KEY as string };
-}
-
 function clampDist(dist: number): number {
   return Math.min(dist, 50);
 }
@@ -46,7 +42,7 @@ export async function fetchRecentNearby(
 ): Promise<EBirdObservation[]> {
   const { maxResults = 50, dist = 25 } = options;
   const url = `${BASE_URL}/data/obs/geo/recent?lat=${lat}&lng=${lng}&maxResults=${maxResults}&dist=${clampDist(dist)}`;
-  const res = await fetch(url, { headers: ebirdHeaders() });
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`eBird error ${res.status}: ${await res.text()}`);
   return res.json() as Promise<EBirdObservation[]>;
 }
@@ -58,7 +54,7 @@ export async function fetchNearbyNotable(
 ): Promise<EBirdObservation[]> {
   const { dist = 25, maxResults = 50 } = options;
   const url = `${BASE_URL}/data/obs/geo/recent/notable?lat=${lat}&lng=${lng}&dist=${clampDist(dist)}&maxResults=${maxResults}`;
-  const res = await fetch(url, { headers: ebirdHeaders() });
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`eBird error ${res.status}: ${await res.text()}`);
   return res.json() as Promise<EBirdObservation[]>;
 }
@@ -91,14 +87,13 @@ export async function fetchTaxonomy(speciesCodes: string[]): Promise<EBirdTaxon[
 
   if (missing.length > 0) {
     const url = `${BASE_URL}/ref/taxonomy/ebird?fmt=json&species=${missing.join(',')}`;
-    const res = await fetch(url, { headers: ebirdHeaders() });
+    const res = await fetch(url);
     if (!res.ok) throw new Error(`eBird taxonomy error ${res.status}: ${await res.text()}`);
     const fetched = await res.json() as EBirdTaxon[];
     const fetchedMap = new Map(fetched.map(t => [t.speciesCode, t]));
     for (const code of missing) {
       cache.set(code, fetchedMap.get(code) ?? null);
     }
-    // Persist: store as object (nulls included) so not-found codes are remembered
     const toStore: Record<string, EBirdTaxon | null> = {};
     for (const [k, v] of cache) toStore[k] = v;
     localStorage.setItem(getTaxonomyKey(), JSON.stringify(toStore));

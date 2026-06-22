@@ -5,23 +5,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev       # start Vite dev server (HMR)
-npm run build     # tsc -b && vite build
-npm run lint      # ESLint
-npm run test      # Vitest (--passWithNoTests)
-npm run preview   # serve the dist build locally
+netlify dev    # start dev server with functions (requires: npm install -g netlify-cli && netlify link)
+npm run build  # tsc -b && vite build
+npm run lint   # ESLint
+npm run test   # Vitest (--passWithNoTests)
+npm run preview  # serve the dist build locally
 ```
 
 Run a single test file: `npx vitest run src/path/to/file.test.ts`
 
 ## Environment variables
 
-Set them in `.env.local`:
+Set them in `.env.local` (for local dev via `netlify dev`) and in the Netlify dashboard (Site settings → Environment variables) for production. Keys are read by Netlify Functions server-side — they are NOT in the browser bundle.
 
 ```
-VITE_EBIRD_API_KEY=       # from ebird.org/api/keygen
-VITE_XC_API_KEY=          # from xeno-canto.org/account
-VITE_NPS_API_KEY=         # from developer.nps.gov/api/keygen
+EBIRD_API_KEY=            # from ebird.org/api/keygen
+XC_API_KEY=               # from xeno-canto.org/account
+NPS_API_KEY=              # from developer.nps.gov/api/keygen
 ```
 
 ## Architecture
@@ -34,10 +34,10 @@ React 19 + TypeScript, Vite 8, Tailwind CSS v4 (via `@tailwindcss/vite` plugin),
 
 ### API layer (`src/api/`)
 
-Three typed API clients, each reading keys from `import.meta.env`:
+Three typed API clients that call local proxy routes (`/api/ebird`, `/api/xc`, `/api/nps`). Keys are NOT in the browser — Netlify Functions inject them server-side:
 
-- **`ebird.ts`** — `fetchRecentNearby(lat, lng)` → `EBirdObservation[]` from `GET /data/obs/geo/recent`. Sends key as `x-ebirdapitoken` header. Provides the "what's here right now" species list.
-- **`xeno-canto.ts`** — `fetchRecordings(query)` and `fetchRecordingsByBox(latMin, latMax, lonMin, lonMax, month?)` from Xeno-canto API v3. Key is a query param. Provides MP3 URLs (`XCRecording.file`) for the audio soundscape.
+- **`ebird.ts`** — `fetchRecentNearby(lat, lng)` → `EBirdObservation[]` from `GET /data/obs/geo/recent`. Provides the "what's here right now" species list.
+- **`xeno-canto.ts`** — `fetchRecordings(query)` and `fetchRecordingsByBox(latMin, latMax, lonMin, lonMax, month?)` from Xeno-canto API v3. Provides MP3 URLs (`XCRecording.file`) for the audio soundscape.
 - **`nps.ts`** — `fetchParks()` → `NpsPark[]` from `GET /parks`. Provides national park locations and codes.
 
 ### Seasonal simulation
