@@ -51,4 +51,9 @@ describe('SpeciesListRow', () => {
     render(<SpeciesListRow obs={obs} isNotable={false} onClick={vi.fn()} />);
     expect(screen.getByText(/Central Park/)).toBeInTheDocument();
   });
+
+  it('button has type="button"', () => {
+    render(<SpeciesListRow obs={obs} isNotable={false} onClick={vi.fn()} />);
+    expect(screen.getByRole('button')).toHaveAttribute('type', 'button');
+  });
 });

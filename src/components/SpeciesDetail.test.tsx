@@ -153,6 +153,41 @@ describe('SpeciesDetail', () => {
     expect(screen.queryByText('Wikipedia ↗')).toBeNull();
   });
 
+  it('back button has aria-label "Back to species list"', async () => {
+    await act(async () => {
+      render(<SpeciesDetail obs={obs} recordings={[]} onBack={vi.fn()} />);
+    });
+    expect(screen.getByRole('button', { name: 'Back to species list' })).toBeInTheDocument();
+  });
+
+  it('back button arrow span is aria-hidden', async () => {
+    await act(async () => {
+      render(<SpeciesDetail obs={obs} recordings={[]} onBack={vi.fn()} />);
+    });
+    const backBtn = screen.getByRole('button', { name: 'Back to species list' });
+    const arrowSpan = backBtn.querySelector('[aria-hidden="true"]');
+    expect(arrowSpan).toBeTruthy();
+    expect(arrowSpan?.textContent).toBe('←');
+  });
+
+  it('eBird link announces it opens in a new tab', async () => {
+    await act(async () => {
+      render(<SpeciesDetail obs={obs} recordings={[]} onBack={vi.fn()} />);
+    });
+    expect(screen.getByRole('link', { name: 'eBird species page (opens in new tab)' })).toBeInTheDocument();
+  });
+
+  it('Wikipedia link announces it opens in a new tab', async () => {
+    vi.mocked(fetchWikiSummary).mockResolvedValue({
+      extract: 'A bird.',
+      pageUrl: 'https://en.wikipedia.org/wiki/American_robin',
+    });
+    await act(async () => {
+      render(<SpeciesDetail obs={obs} recordings={[]} onBack={vi.fn()} />);
+    });
+    expect(screen.getByRole('link', { name: 'Wikipedia (opens in new tab)' })).toBeInTheDocument();
+  });
+
   it('shows Play call button after loading', async () => {
     await act(async () => {
       render(<SpeciesDetail obs={obs} recordings={[]} onBack={vi.fn()} />);

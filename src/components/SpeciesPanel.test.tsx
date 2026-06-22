@@ -81,7 +81,7 @@ describe('SpeciesPanel', () => {
       />,
     );
     fireEvent.click(screen.getByText('Snow Bunting'));
-    expect(screen.getByText('← Back')).toBeInTheDocument();
+    expect(screen.getByText(/Back/)).toBeInTheDocument();
   });
 
   it('Back button returns to list view', () => {
@@ -94,7 +94,7 @@ describe('SpeciesPanel', () => {
       />,
     );
     fireEvent.click(screen.getByText('Snow Bunting'));
-    fireEvent.click(screen.getByText('← Back'));
+    fireEvent.click(screen.getByText(/Back/));
     expect(screen.getByText('Rarest Sightings')).toBeInTheDocument();
   });
 

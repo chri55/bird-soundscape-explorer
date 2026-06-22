@@ -107,7 +107,7 @@ export function SpeciesDetail({ obs, recordings, onBack }: SpeciesDetailProps): 
 
     const audio = new Audio(rec.file);
     playAudioRef.current = audio;
-    audio.addEventListener('ended', () => setPlayState('idle'), { once: true } as AddEventListenerOptions);
+    audio.addEventListener('ended', () => setPlayState('idle'), { once: true });
     void audio.play()
       .then(() => setPlayState('playing'))
       .catch(() => setPlayState('idle'));
@@ -118,10 +118,12 @@ export function SpeciesDetail({ obs, recordings, onBack }: SpeciesDetailProps): 
       {/* Back button */}
       <div className="shrink-0 px-4 py-2 border-b border-gray-100">
         <button
+          type="button"
+          aria-label="Back to species list"
           onClick={onBack}
           className="text-sm text-green-700 hover:text-green-900 font-medium flex items-center gap-1"
         >
-          ← Back
+          <span aria-hidden="true">←</span> Back
         </button>
       </div>
 
@@ -189,6 +191,7 @@ export function SpeciesDetail({ obs, recordings, onBack }: SpeciesDetailProps): 
                 href={wikiSummary.pageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Wikipedia (opens in new tab)"
                 className="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium"
               >
                 Wikipedia ↗
@@ -198,6 +201,7 @@ export function SpeciesDetail({ obs, recordings, onBack }: SpeciesDetailProps): 
               href={`https://ebird.org/species/${obs.speciesCode}`}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="eBird species page (opens in new tab)"
               className="text-xs px-3 py-1.5 rounded-full bg-green-50 text-green-700 hover:bg-green-100 font-medium"
             >
               eBird ↗

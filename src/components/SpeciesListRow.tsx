@@ -15,6 +15,7 @@ export function SpeciesListRow({ obs, isNotable, onClick }: SpeciesListRowProps)
 
   return (
     <button
+      type="button"
       onClick={onClick}
       className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 flex items-start justify-between gap-2"
     >
