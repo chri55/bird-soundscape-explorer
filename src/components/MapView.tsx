@@ -17,6 +17,7 @@ import { fillRecordingGaps } from '../utils/soundscape-recordings';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGear } from '@fortawesome/free-solid-svg-icons';
 import { useSoundscape, MAX_VOICES, SPARE_VOICES } from '../hooks/useSoundscape';
+import type { SoundscapeVoice } from '../hooks/useSoundscape';
 import { useExclusionList } from '../hooks/useExclusionList';
 import { SpeciesPanel } from './SpeciesPanel';
 import { SoundscapeGrid } from './SoundscapeGrid';
@@ -68,6 +69,7 @@ export default function MapView() {
   const [isLoading, setIsLoading] = useState(false);
   const [flyToTarget, setFlyToTarget] = useState<LatLng | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState<SoundscapeVoice | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>('map');
   const { exclusions, excludedSciNames, addExclusion, removeExclusion } = useExclusionList();
 
@@ -177,25 +179,51 @@ export default function MapView() {
       </div>
 
       {soundscape.voices.length > 0 && (
-        <div className={`shrink-0 bg-gray-900 items-center gap-2 px-3 py-2 relative z-10 ${
-          mobileTab !== 'map' ? 'hidden md:flex' : 'flex'
-        }`}>
-          <SoundscapeControls
-            isPlaying={soundscape.isPlaying}
-            voiceCount={soundscape.voices.length}
-            loadedCount={soundscape.loadedCount}
-            allMuted={soundscape.allMuted}
-            onToggle={soundscape.toggle}
-            onMuteAll={soundscape.muteAll}
-          />
-          <div className="flex-1 min-w-0 relative z-10">
-            <SoundscapeGrid
-              voices={soundscape.voices}
-              onToggleMute={soundscape.toggleMute}
-              onReroll={soundscape.rerollVoice}
+        <>
+          {selectedVoice && mobileTab === 'map' && (
+            <div className="md:hidden shrink-0 bg-gray-800 flex gap-3 px-3 py-2 items-center">
+              <div className="w-16 h-16 rounded overflow-hidden shrink-0 bg-gray-700 flex items-center justify-center">
+                {selectedVoice.photo ? (
+                  <img
+                    src={selectedVoice.photo.photoUrl}
+                    alt={selectedVoice.recording.en}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <p className="text-white text-xs text-center px-1">{selectedVoice.recording.en}</p>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-white text-sm font-semibold truncate">{selectedVoice.recording.en}</p>
+                <p className="text-gray-400 text-xs italic truncate">{selectedVoice.sciName}</p>
+                {selectedVoice.photo && (
+                  <p className="text-gray-500 text-xs truncate">{selectedVoice.photo.attribution}</p>
+                )}
+                <p className="text-gray-500 text-xs truncate">Rec: {selectedVoice.recording.rec}</p>
+              </div>
+            </div>
+          )}
+          <div className={`shrink-0 bg-gray-900 items-center gap-2 px-3 py-2 relative z-10 ${
+            mobileTab !== 'map' ? 'hidden md:flex' : 'flex'
+          }`}>
+            <SoundscapeControls
+              isPlaying={soundscape.isPlaying}
+              voiceCount={soundscape.voices.length}
+              loadedCount={soundscape.loadedCount}
+              allMuted={soundscape.allMuted}
+              onToggle={soundscape.toggle}
+              onMuteAll={soundscape.muteAll}
             />
+            <div className="flex-1 min-w-0 relative z-10">
+              <SoundscapeGrid
+                voices={soundscape.voices}
+                onToggleMute={soundscape.toggleMute}
+                onReroll={soundscape.rerollVoice}
+                onSelectedVoiceChange={setSelectedVoice}
+              />
+            </div>
           </div>
-        </div>
+        </>
       )}
       <MobileTabBar activeTab={mobileTab} onTabChange={setMobileTab} />
       <SettingsModal
