@@ -14,13 +14,17 @@ import { fetchRecentNearby, fetchNearbyNotable } from '../api/ebird';
 import type { XCRecording } from '../api/xeno-canto';
 import { fetchRecordingsByBox } from '../api/xeno-canto';
 import { fillRecordingGaps } from '../utils/soundscape-recordings';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faGear } from '@fortawesome/free-solid-svg-icons';
 import { useSoundscape, MAX_VOICES, SPARE_VOICES } from '../hooks/useSoundscape';
+import { useExclusionList } from '../hooks/useExclusionList';
 import { SpeciesPanel } from './SpeciesPanel';
 import { SoundscapeGrid } from './SoundscapeGrid';
 import { SoundscapeControls } from './SoundscapeControls';
 import { useNpsParks } from '../hooks/useNpsParks';
 import { ParkClusterLayer } from './ParkClusterLayer';
 import { ParkSearch } from './ParkSearch';
+import { SettingsModal } from './SettingsModal';
 
 const defaultIcon = L.icon({
   iconUrl: markerIconUrl,
@@ -61,12 +65,18 @@ export default function MapView() {
   const [recordings, setRecordings] = useState<XCRecording[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [flyToTarget, setFlyToTarget] = useState<LatLng | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { exclusions, excludedSciNames, addExclusion, removeExclusion } = useExclusionList();
 
   const lastFetchRef = useRef<LatLng | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const soundscape = useSoundscape(recordings, recentObs, notableObs);
+  const soundscape = useSoundscape(recordings, recentObs, notableObs, excludedSciNames);
   const parks = useNpsParks();
+
+  const availableObs = [...notableObs, ...recentObs].filter(
+    (obs, i, arr) => arr.findIndex(o => o.sciName === obs.sciName) === i,
+  );
 
   const fetchForPin = useCallback(async (pos: LatLng) => {
     if (lastFetchRef.current && haversineKm(pos, lastFetchRef.current) < FETCH_RADIUS_KM) return;
@@ -126,6 +136,14 @@ export default function MapView() {
             {pin.lat.toFixed(4)}, {pin.lng.toFixed(4)}
           </span>
         )}
+        <button
+          type="button"
+          aria-label="Open settings"
+          onClick={() => setSettingsOpen(true)}
+          className={`${pin ? '' : 'ml-auto '}p-1 rounded hover:bg-green-700 transition-colors`}
+        >
+          <FontAwesomeIcon icon={faGear} />
+        </button>
       </header>
 
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
@@ -172,6 +190,14 @@ export default function MapView() {
           </div>
         </div>
       )}
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        availableObs={availableObs}
+        exclusions={exclusions}
+        onAddExclusion={addExclusion}
+        onRemoveExclusion={removeExclusion}
+      />
     </div>
   );
 }
