@@ -368,15 +368,18 @@ export function useSoundscape(
     isMutedRef.current[index]   = false;
     pendingEndedRef.current[index] = false;
 
-    setVoices(v => v.map((voice, i) =>
-      i === index ? { ...voice, isLoading: true, isActive: false, isFailed: false } : voice,
-    ));
+    setVoices(v => {
+      const newVoices = v.map((voice, i) =>
+        i === index ? { ...voice, isLoading: true, isActive: false, isFailed: false } : voice,
+      );
+      voicesRef.current = newVoices;
+      return newVoices;
+    });
 
     // Build candidate list — union of notableObs + recentObs, deduped, excluding
-    // species active in other slots and species in the 24h XC blocklist
-    const activeSciNames = new Set(
-      voicesRef.current.filter((_, i) => i !== index).map(v => v.sciName),
-    );
+    // all currently-occupied slots (including the one being rerolled, so the same
+    // bird isn't immediately re-selected) and species in the 24h XC blocklist
+    const activeSciNames = new Set(voicesRef.current.map(v => v.sciName));
     const blocklist = readBlocklist();
     const seen = new Set<string>();
     const allObs = [...notableObsRef.current, ...recentObsRef.current];
@@ -429,17 +432,21 @@ export function useSoundscape(
               return;
             }
 
-            setVoices(v => v.map((voice, i) => i === index ? {
-              recording: best,
-              sciName:   candidate.sciName,
-              howMany:   candidate.howMany ?? 1,
-              intervalMs: MAX_INTERVAL_MS,
-              isActive:  false,
-              isLoading: true,
-              isFailed:  false,
-              isMuted:   false,
-              photo:     photo ?? null,
-            } : voice));
+            setVoices(v => {
+              const newVoices = v.map((voice, i) => i === index ? {
+                recording: best,
+                sciName:   candidate.sciName,
+                howMany:   candidate.howMany ?? 1,
+                intervalMs: MAX_INTERVAL_MS,
+                isActive:  false,
+                isLoading: true,
+                isFailed:  false,
+                isMuted:   false,
+                photo:     photo ?? null,
+              } : voice);
+              voicesRef.current = newVoices;
+              return newVoices;
+            });
             return;
           } else {
             addToBlocklist(candidate.sciName);

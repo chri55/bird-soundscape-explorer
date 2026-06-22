@@ -642,7 +642,9 @@ describe('useSoundscape — mute all and loaded count', () => {
 describe('rerollVoice', () => {
   it('sets slot to isLoading:true immediately on reroll', async () => {
     vi.mocked(fetchRecordings).mockImplementation(() => new Promise(() => {}));
-    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1]));
+    // notableObs provides a candidate distinct from the current voice (obs1 = Turdus migratorius)
+    const notableObs = [makeObs('Parus major', 5)];
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1], notableObs));
     await act(async () => { await vi.runAllTimersAsync(); });
 
     act(() => { result.current.rerollVoice(0); });
