@@ -41,7 +41,7 @@ export function SettingsModal({
       onClick={onClose}
     >
       <div
-        className="max-w-lg w-full mx-4 max-h-[90vh] flex flex-col bg-gray-900 rounded-xl overflow-hidden"
+        className="w-full h-full flex flex-col bg-gray-900 overflow-hidden md:h-auto md:max-w-lg md:mx-4 md:max-h-[90vh] md:rounded-xl"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 shrink-0">
@@ -50,7 +50,7 @@ export function SettingsModal({
             type="button"
             aria-label="Close settings"
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-white transition-colors"
+            className="p-2 text-lg text-gray-400 hover:text-white transition-colors"
           >
             <FontAwesomeIcon icon={faXmark} />
           </button>

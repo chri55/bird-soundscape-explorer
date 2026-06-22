@@ -106,4 +106,23 @@ describe('SettingsModal', () => {
     expect(screen.getByText('Xeno-canto')).toBeInTheDocument();
     expect(screen.getByText('iNaturalist')).toBeInTheDocument();
   });
+
+  it('modal inner div has h-full class for mobile full-screen', () => {
+    const { container } = render(<SettingsModal {...baseProps} />);
+    const modal = container.querySelector('.bg-gray-900');
+    expect(modal?.className.split(' ')).toContain('h-full');
+  });
+
+  it('modal inner div has md:max-h-[90vh] class for desktop height cap', () => {
+    const { container } = render(<SettingsModal {...baseProps} />);
+    const modal = container.querySelector('.bg-gray-900');
+    expect(modal?.className.split(' ')).toContain('md:max-h-[90vh]');
+  });
+
+  it('close button has p-2 class for easy tap', () => {
+    render(<SettingsModal {...baseProps} />);
+    expect(
+      screen.getByRole('button', { name: 'Close settings' }).className.split(' '),
+    ).toContain('p-2');
+  });
 });
