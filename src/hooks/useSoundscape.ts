@@ -113,6 +113,7 @@ export function useSoundscape(
   const notableObsRef = useRef<EBirdObservation[]>(notableObs);
   const recentObsRef  = useRef<EBirdObservation[]>(recentObs);
   const voicesRef     = useRef<SoundscapeVoice[]>([]);
+  const rerollSeqRef  = useRef<number[]>([]);
 
   const stopAll = useCallback(() => {
     timersRef.current.forEach(t => clearTimeout(t));
@@ -172,6 +173,9 @@ export function useSoundscape(
 
   // Rebuild when source data changes
   useEffect(() => {
+    for (let i = 0; i < rerollSeqRef.current.length; i++) {
+      rerollSeqRef.current[i] = (rerollSeqRef.current[i] ?? 0) + 1;
+    }
     stopAll();
     pendingEndedRef.current = [];
     isMutedRef.current = [];
@@ -385,11 +389,17 @@ export function useSoundscape(
     }
     candidates.sort((a, b) => (b.howMany ?? 0) - (a.howMany ?? 0));
 
+    rerollSeqRef.current[index] = (rerollSeqRef.current[index] ?? 0) + 1;
+    const mySeq = rerollSeqRef.current[index];
+
     void (async () => {
       for (const candidate of candidates.slice(0, MAX_REROLL_ATTEMPTS)) {
-        const [genus, species] = candidate.sciName.split(' ');
+        const parts = candidate.sciName.trim().split(/\s+/);
+        if (parts.length < 2 || !/^[A-Za-z]+$/.test(parts[1]!)) continue;
+        const [genus, species] = parts;
         try {
           const response = await fetchRecordings(`gen:${genus} sp:${species}`);
+          if (rerollSeqRef.current[index] !== mySeq) return;
           const best = bestRecording(candidate.sciName, response.recordings);
           if (best) {
             const newAudio = new Audio(best.file);
@@ -412,6 +422,13 @@ export function useSoundscape(
 
             const photo = await fetchBirdPhoto(candidate.sciName).catch(() => null);
 
+            if (rerollSeqRef.current[index] !== mySeq) {
+              newAudio.pause();
+              newAudio.src = '';
+              newAudio.load();
+              return;
+            }
+
             setVoices(v => v.map((voice, i) => i === index ? {
               recording: best,
               sciName:   candidate.sciName,
@@ -432,6 +449,7 @@ export function useSoundscape(
         }
       }
       // All attempts exhausted
+      if (rerollSeqRef.current[index] !== mySeq) return;
       setVoices(v => v.map((voice, i) =>
         i === index ? { ...voice, isFailed: true, isLoading: false } : voice,
       ));

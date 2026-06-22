@@ -85,7 +85,12 @@ export function SpeciesDetail({ obs, recordings, onBack }: SpeciesDetailProps): 
 
     let rec = playRecording;
     if (!rec) {
-      const [genus, species] = obs.sciName.split(' ');
+      const parts = obs.sciName.trim().split(/\s+/);
+      if (parts.length < 2 || !/^[A-Za-z]+$/.test(parts[1]!)) {
+        setPlayState('none');
+        return;
+      }
+      const [genus, species] = parts;
       try {
         const response = await fetchRecordings(`gen:${genus} sp:${species}`);
         rec = bestRecording(obs.sciName, response.recordings);

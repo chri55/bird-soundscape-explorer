@@ -10,6 +10,7 @@ import {
 import { renderHook, act } from '@testing-library/react';
 import { fetchBirdPhoto } from '../api/inat';
 import { fetchRecordings } from '../api/xeno-canto';
+import { addToBlocklist } from '../utils/xc-blocklist';
 
 vi.mock('../api/inat', () => ({ fetchBirdPhoto: vi.fn().mockResolvedValue(null) }));
 vi.mock('../api/xeno-canto', () => ({ fetchRecordings: vi.fn() }));
@@ -698,5 +699,24 @@ describe('rerollVoice', () => {
     expect(vi.mocked(fetchRecordings)).toHaveBeenCalledWith(
       expect.stringMatching(/gen:Parus sp:major/),
     );
+  });
+
+  it('skips blocklisted species and does not call fetchRecordings for them', async () => {
+    // Seed a fresh blocklist entry for notableObs species
+    addToBlocklist('Parus major');
+
+    const notableObs = [makeObs('Parus major', 5)];
+    vi.mocked(fetchRecordings).mockResolvedValue({
+      numRecordings: '0', numSpecies: '0', page: 1, numPages: 1, recordings: [],
+    });
+
+    const { result } = renderHook(() => useSoundscape([xcRec1], [obs1], notableObs));
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    await act(async () => { result.current.rerollVoice(0); });
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    // Parus major was blocklisted; fetchRecordings was called for Turdus migratorius (obs1) but not for Parus major
+    expect(vi.mocked(fetchRecordings)).not.toHaveBeenCalledWith('gen:Parus sp:major');
   });
 });
