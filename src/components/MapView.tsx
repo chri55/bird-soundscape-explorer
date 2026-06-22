@@ -65,7 +65,7 @@ export default function MapView() {
   const lastFetchRef = useRef<LatLng | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const soundscape = useSoundscape(recordings, recentObs);
+  const soundscape = useSoundscape(recordings, recentObs, notableObs);
   const parks = useNpsParks();
 
   const fetchForPin = useCallback(async (pos: LatLng) => {
@@ -164,7 +164,11 @@ export default function MapView() {
             onMuteAll={soundscape.muteAll}
           />
           <div className="flex-1 min-w-0 relative z-10">
-            <SoundscapeGrid voices={soundscape.voices} onToggleMute={soundscape.toggleMute} />
+            <SoundscapeGrid
+              voices={soundscape.voices}
+              onToggleMute={soundscape.toggleMute}
+              onReroll={soundscape.rerollVoice}
+            />
           </div>
         </div>
       )}

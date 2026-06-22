@@ -1,14 +1,15 @@
 import type { SoundscapeVoice } from '../hooks/useSoundscape';
 import { Skeleton } from './Skeleton';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faVolumeHigh, faVolumeXmark } from '@fortawesome/free-solid-svg-icons';
+import { faVolumeHigh, faVolumeXmark, faDice } from '@fortawesome/free-solid-svg-icons';
 
 interface SoundscapeGridProps {
   voices: SoundscapeVoice[];
   onToggleMute: (index: number) => void;
+  onReroll: (index: number) => void;
 }
 
-export function SoundscapeGrid({ voices, onToggleMute }: SoundscapeGridProps) {
+export function SoundscapeGrid({ voices, onToggleMute, onReroll }: SoundscapeGridProps) {
   if (voices.length === 0) return null;
 
   return (
@@ -47,8 +48,19 @@ export function SoundscapeGrid({ voices, onToggleMute }: SoundscapeGridProps) {
               </div>
             </div>
 
+            {/* Reroll button */}
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); onReroll(i); }}
+              aria-label="Reroll bird"
+              className="absolute top-1 left-1 z-20 w-6 h-6 flex items-center justify-center rounded text-white bg-black/50 hover:bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+            >
+              <FontAwesomeIcon icon={faDice} className="text-xs" />
+            </button>
+
             {/* Mute button */}
             <button
+              type="button"
               onClick={e => { e.stopPropagation(); onToggleMute(i); }}
               aria-label={voice.isMuted ? 'Unmute bird' : 'Mute bird'}
               className={`absolute top-1 right-1 z-20 w-6 h-6 flex items-center justify-center rounded text-white bg-black/50 hover:bg-black/70 transition-opacity duration-150 ${
