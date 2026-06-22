@@ -25,6 +25,8 @@ import { useNpsParks } from '../hooks/useNpsParks';
 import { ParkClusterLayer } from './ParkClusterLayer';
 import { ParkSearch } from './ParkSearch';
 import { SettingsModal } from './SettingsModal';
+import type { MobileTab } from './MobileTabBar';
+import { MobileTabBar } from './MobileTabBar';
 
 const defaultIcon = L.icon({
   iconUrl: markerIconUrl,
@@ -66,6 +68,7 @@ export default function MapView() {
   const [isLoading, setIsLoading] = useState(false);
   const [flyToTarget, setFlyToTarget] = useState<LatLng | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mobileTab, setMobileTab] = useState<MobileTab>('map');
   const { exclusions, excludedSciNames, addExclusion, removeExclusion } = useExclusionList();
 
   const lastFetchRef = useRef<LatLng | null>(null);
@@ -147,15 +150,17 @@ export default function MapView() {
       </header>
 
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-        <SpeciesPanel
-          notableObs={notableObs}
-          recentObs={recentObs}
-          recordings={recordings}
-          isLoading={isLoading}
-        />
+        <div className={`${mobileTab === 'list' ? 'flex flex-col flex-1' : 'hidden'} md:contents`}>
+          <SpeciesPanel
+            notableObs={notableObs}
+            recentObs={recentObs}
+            recordings={recordings}
+            isLoading={isLoading}
+          />
+        </div>
 
-        <div className="flex-1 relative z-0 min-h-0">
-          <div className="absolute top-3 left-14 z-[1000] w-64">
+        <div className={`${mobileTab === 'map' ? '' : 'hidden md:block'} flex-1 relative z-0 min-h-0`}>
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 md:left-14 md:translate-x-0 z-[1000] w-64">
             <ParkSearch parks={parks} onSelect={handleParkSearch} />
           </div>
           <MapContainer center={[39.5, -98.35]} zoom={4} className="w-full h-full cursor-crosshair">
@@ -172,7 +177,9 @@ export default function MapView() {
       </div>
 
       {soundscape.voices.length > 0 && (
-        <div className="shrink-0 bg-gray-900 flex items-center gap-2 px-3 py-2 relative z-10">
+        <div className={`shrink-0 bg-gray-900 items-center gap-2 px-3 py-2 relative z-10 ${
+          mobileTab !== 'map' ? 'hidden md:flex' : 'flex'
+        }`}>
           <SoundscapeControls
             isPlaying={soundscape.isPlaying}
             voiceCount={soundscape.voices.length}
@@ -190,6 +197,7 @@ export default function MapView() {
           </div>
         </div>
       )}
+      <MobileTabBar activeTab={mobileTab} onTabChange={setMobileTab} />
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
