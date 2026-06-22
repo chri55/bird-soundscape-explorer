@@ -11,7 +11,7 @@ export function deduplicateObs(obs: EBirdObservation[]): DeduplicatedObs[] {
   for (const o of obs) {
     const existing = seen.get(o.sciName);
     if (!existing) {
-      seen.set(o.sciName, { ...o, howMany: o.howMany ?? 0, firstObsDt: o.obsDt });
+      seen.set(o.sciName, { ...o, firstObsDt: o.obsDt });
     } else {
       const isLater = o.obsDt.slice(0, 10) > existing.obsDt.slice(0, 10);
       const isEarlier = o.obsDt.slice(0, 10) < existing.firstObsDt.slice(0, 10);
