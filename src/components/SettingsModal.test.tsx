@@ -21,6 +21,9 @@ const baseProps = {
 };
 
 describe('SettingsModal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it('renders nothing when isOpen is false', () => {
     const { container } = render(<SettingsModal {...baseProps} isOpen={false} />);
     expect(container.firstChild).toBeNull();

@@ -322,6 +322,10 @@ export function useSoundscape(
     });
 
     return () => { cancelled = true; };
+  // excludedSciNames is intentionally omitted from deps: applying exclusions
+  // immediately would call stopAll(), disrupting live playback. Exclusions take
+  // effect on the next rebuild (next pin drop). rerollVoice respects them
+  // immediately via excludedSciNamesRef.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordingsKey, recentObsKey, stopAll]);
 
