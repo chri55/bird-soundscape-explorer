@@ -192,4 +192,12 @@ describe('SoundscapeGrid', () => {
     const rerollBtn = container.querySelector('button[aria-label="Reroll bird"]')!;
     expect(rerollBtn.className.split(' ')).toContain('opacity-0');
   });
+
+  it('card name overlay has hidden class (hidden on mobile)', () => {
+    const { container } = render(
+      <SoundscapeGrid voices={[makeVoice({ isLoading: false })]} onToggleMute={vi.fn()} onReroll={vi.fn()} />,
+    );
+    const overlay = container.querySelector('.absolute.bottom-0');
+    expect(overlay?.className.split(' ')).toContain('hidden');
+  });
 });

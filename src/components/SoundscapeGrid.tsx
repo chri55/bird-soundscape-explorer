@@ -111,7 +111,7 @@ export function SoundscapeGrid({ voices, onToggleMute, onReroll, onSelectedVoice
                 </div>
               )}
               {!voice.isLoading && (
-                <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5">
+                <div className="hidden md:block absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5">
                   <p className={`text-xs text-white truncate transition-opacity duration-300 ${voice.isActive ? 'opacity-100' : 'opacity-60'}`}>
                     {voice.recording.en}
                   </p>
