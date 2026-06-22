@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 const STORAGE_KEY = 'bird_exclusions_v1';
 
@@ -38,22 +38,23 @@ export function useExclusionList(): {
     [exclusions],
   );
 
-  const addExclusion = (sciName: string, comName: string) => {
+  const addExclusion = useCallback((sciName: string, comName: string) => {
     setExclusions(prev => {
       if (prev.some(e => e.sciName === sciName)) return prev;
       const next = [...prev, { sciName, comName }];
       writeStorage(next);
       return next;
     });
-  };
+  }, []);
 
-  const removeExclusion = (sciName: string) => {
+  const removeExclusion = useCallback((sciName: string) => {
     setExclusions(prev => {
       const next = prev.filter(e => e.sciName !== sciName);
+      if (next.length === prev.length) return prev;
       writeStorage(next);
       return next;
     });
-  };
+  }, []);
 
   return { exclusions, excludedSciNames, addExclusion, removeExclusion };
 }
