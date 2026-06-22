@@ -98,6 +98,7 @@ export function useSoundscape(
   recordings: XCRecording[],
   recentObs: EBirdObservation[],
   notableObs: EBirdObservation[] = [],
+  excludedSciNames: Set<string> = new Set(),
 ): UseSoundscapeResult {
   const [voices, setVoices] = useState<SoundscapeVoice[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -115,6 +116,7 @@ export function useSoundscape(
   const recentObsRef  = useRef<EBirdObservation[]>(recentObs);
   const voicesRef     = useRef<SoundscapeVoice[]>([]);
   const rerollSeqRef  = useRef<number[]>([]);
+  const excludedSciNamesRef = useRef<Set<string>>(excludedSciNames);
 
   const stopAll = useCallback(() => {
     timersRef.current.forEach(t => clearTimeout(t));
@@ -137,6 +139,7 @@ export function useSoundscape(
   useEffect(() => { notableObsRef.current = notableObs; }, [notableObs]);
   useEffect(() => { recentObsRef.current  = recentObs;  }, [recentObs]);
   useEffect(() => { voicesRef.current     = voices;     }, [voices]);
+  useEffect(() => { excludedSciNamesRef.current = excludedSciNames; }, [excludedSciNames]);
 
   const startVoice = useCallback((index: number) => {
     const audio = audioRefs.current[index];
@@ -183,7 +186,8 @@ export function useSoundscape(
     endedHandlersRef.current = [];
     let cancelled = false;
 
-    const allCandidates = selectVoices(recordings, recentObs, MAX_VOICES + SPARE_VOICES);
+    const allCandidates = selectVoices(recordings, recentObs, MAX_VOICES + SPARE_VOICES)
+      .filter(c => !excludedSciNamesRef.current.has(c.sciName));
     const selected = allCandidates.slice(0, MAX_VOICES);
     sparePoolRef.current = allCandidates.slice(MAX_VOICES);
     retryCountsRef.current = selected.map(() => 0);
@@ -389,7 +393,7 @@ export function useSoundscape(
     const allObs = [...notableObsRef.current, ...recentObsRef.current];
     const candidates: EBirdObservation[] = [];
     for (const obs of allObs) {
-      if (!seen.has(obs.sciName) && !activeSciNames.has(obs.sciName) && !blocklist.has(obs.sciName)) {
+      if (!seen.has(obs.sciName) && !activeSciNames.has(obs.sciName) && !blocklist.has(obs.sciName) && !excludedSciNamesRef.current.has(obs.sciName)) {
         seen.add(obs.sciName);
         candidates.push(obs);
       }

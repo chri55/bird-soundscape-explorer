@@ -726,4 +726,28 @@ describe('rerollVoice', () => {
     // Parus major was blocklisted; fetchRecordings was called for Turdus migratorius (obs1) but not for Parus major
     expect(vi.mocked(fetchRecordings)).not.toHaveBeenCalledWith('gen:Parus sp:major');
   });
+
+  it('excludes specified species from initial voices', async () => {
+    const excluded = new Set(['Turdus migratorius']);
+    const { result } = renderHook(() =>
+      useSoundscape([xcRec1, xcRec2], [obs1, obs2], [], excluded),
+    );
+    await act(async () => { await vi.runAllTimersAsync(); });
+    expect(result.current.voices.every(v => v.sciName !== 'Turdus migratorius')).toBe(true);
+    expect(result.current.voices.some(v => v.sciName === 'Parus major')).toBe(true);
+  });
+
+  it('rerollVoice skips excluded species', async () => {
+    const excluded = new Set(['Parus major']);
+    const notableObs = [makeObs('Parus major', 5)];
+    const { result } = renderHook(() =>
+      useSoundscape([xcRec1], [obs1], notableObs, excluded),
+    );
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    await act(async () => { result.current.rerollVoice(0); });
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    expect(vi.mocked(fetchRecordings)).not.toHaveBeenCalledWith('gen:Parus sp:major');
+  });
 });
