@@ -31,9 +31,9 @@ describe('SoundscapeGrid', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('has grid-cols-8 class on the container', () => {
+  it('has grid-cols-4 class on the container', () => {
     const { container } = render(<SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} onReroll={vi.fn()} />);
-    expect(container.querySelector('.grid-cols-8')).toBeTruthy();
+    expect(container.querySelector('.grid-cols-4')).toBeTruthy();
   });
 
   it('active card has ring-green-400 class', () => {
@@ -139,5 +139,57 @@ describe('SoundscapeGrid', () => {
       <SoundscapeGrid voices={[makeVoice({ isFailed: true })]} onToggleMute={vi.fn()} onReroll={vi.fn()} />,
     );
     expect(container.querySelector('button[aria-label="Reroll bird"]')).toBeNull();
+  });
+
+  it('calls onSelectedVoiceChange with voice when card is clicked', () => {
+    const onSelectedVoiceChange = vi.fn();
+    const voice = makeVoice();
+    const { container } = render(
+      <SoundscapeGrid voices={[voice]} onToggleMute={vi.fn()} onReroll={vi.fn()} onSelectedVoiceChange={onSelectedVoiceChange} />,
+    );
+    const grid = container.querySelector('.grid-cols-4')!;
+    fireEvent.click(grid.children[0]!);
+    expect(onSelectedVoiceChange).toHaveBeenCalledWith(voice);
+  });
+
+  it('calls onSelectedVoiceChange with null when same card is clicked again', () => {
+    const onSelectedVoiceChange = vi.fn();
+    const { container } = render(
+      <SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} onReroll={vi.fn()} onSelectedVoiceChange={onSelectedVoiceChange} />,
+    );
+    const grid = container.querySelector('.grid-cols-4')!;
+    fireEvent.click(grid.children[0]!);
+    fireEvent.click(grid.children[0]!);
+    expect(onSelectedVoiceChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it('calls onSelectedVoiceChange with null when reroll button is clicked', () => {
+    const onSelectedVoiceChange = vi.fn();
+    const { container } = render(
+      <SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} onReroll={vi.fn()} onSelectedVoiceChange={onSelectedVoiceChange} />,
+    );
+    const grid = container.querySelector('.grid-cols-4')!;
+    fireEvent.click(grid.children[0]!);
+    onSelectedVoiceChange.mockClear();
+    fireEvent.click(container.querySelector('button[aria-label="Reroll bird"]')!);
+    expect(onSelectedVoiceChange).toHaveBeenCalledWith(null);
+  });
+
+  it('selected card reroll button does not have standalone opacity-0 class', () => {
+    const { container } = render(
+      <SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} onReroll={vi.fn()} />,
+    );
+    const grid = container.querySelector('.grid-cols-4')!;
+    fireEvent.click(grid.children[0]!);
+    const rerollBtn = container.querySelector('button[aria-label="Reroll bird"]')!;
+    expect(rerollBtn.className.split(' ')).not.toContain('opacity-0');
+  });
+
+  it('unselected card reroll button has opacity-0 class', () => {
+    const { container } = render(
+      <SoundscapeGrid voices={[makeVoice()]} onToggleMute={vi.fn()} onReroll={vi.fn()} />,
+    );
+    const rerollBtn = container.querySelector('button[aria-label="Reroll bird"]')!;
+    expect(rerollBtn.className.split(' ')).toContain('opacity-0');
   });
 });

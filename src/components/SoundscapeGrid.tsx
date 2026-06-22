@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import type { SoundscapeVoice } from '../hooks/useSoundscape';
 import { Skeleton } from './Skeleton';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -7,19 +9,29 @@ interface SoundscapeGridProps {
   voices: SoundscapeVoice[];
   onToggleMute: (index: number) => void;
   onReroll: (index: number) => void;
+  onSelectedVoiceChange?: (voice: SoundscapeVoice | null) => void;
 }
 
-export function SoundscapeGrid({ voices, onToggleMute, onReroll }: SoundscapeGridProps) {
+export function SoundscapeGrid({ voices, onToggleMute, onReroll, onSelectedVoiceChange }: SoundscapeGridProps) {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  function handleCardClick(i: number) {
+    const next = i === selectedIndex ? null : i;
+    setSelectedIndex(next);
+    onSelectedVoiceChange?.(next !== null ? voices[next] : null);
+  }
+
   if (voices.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-8 gap-2 p-1 w-full">
+    <div className="grid grid-cols-4 md:grid-cols-8 gap-2 p-1 w-full">
       {voices.map((voice, i) => {
         if (voice.isFailed) return null;
         return (
           <div
             key={voice.recording.id}
-            className={`relative group rounded-lg ring-2 transition-all duration-300 ${
+            onClick={() => handleCardClick(i)}
+            className={`relative group rounded-lg ring-2 transition-all duration-300 cursor-pointer ${
               voice.isActive ? 'ring-green-400' : 'ring-transparent'
             }`}
           >
@@ -51,11 +63,15 @@ export function SoundscapeGrid({ voices, onToggleMute, onReroll }: SoundscapeGri
             {/* Reroll button — stays visible and spins while fetching new bird */}
             <button
               type="button"
-              onClick={e => { e.stopPropagation(); onReroll(i); }}
+              onClick={e => { e.stopPropagation(); setSelectedIndex(null); onSelectedVoiceChange?.(null); onReroll(i); }}
               aria-label="Reroll bird"
               disabled={voice.isRerolling}
               className={`absolute top-1 left-1 z-20 w-6 h-6 flex items-center justify-center rounded text-white bg-black/50 hover:bg-black/70 transition-opacity duration-150 ${
-                voice.isRerolling ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                voice.isRerolling
+                  ? 'opacity-100'
+                  : selectedIndex === i
+                    ? 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                    : 'opacity-0 group-hover:opacity-100'
               }`}
             >
               <FontAwesomeIcon icon={faDice} className={`text-xs${voice.isRerolling ? ' fa-spin' : ''}`} />
@@ -67,14 +83,18 @@ export function SoundscapeGrid({ voices, onToggleMute, onReroll }: SoundscapeGri
               onClick={e => { e.stopPropagation(); onToggleMute(i); }}
               aria-label={voice.isMuted ? 'Unmute bird' : 'Mute bird'}
               className={`absolute top-1 right-1 z-20 w-6 h-6 flex items-center justify-center rounded text-white bg-black/50 hover:bg-black/70 transition-opacity duration-150 ${
-                voice.isMuted ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                voice.isMuted
+                  ? 'opacity-100'
+                  : selectedIndex === i
+                    ? 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                    : 'opacity-0 group-hover:opacity-100'
               }`}
             >
               <FontAwesomeIcon icon={voice.isMuted ? faVolumeXmark : faVolumeHigh} className="text-xs" />
             </button>
 
             {/* Card content */}
-            <div className={`relative w-full h-[110px] rounded-lg overflow-hidden bg-black/60 transition-all duration-300 ${
+            <div className={`relative w-full aspect-square md:aspect-auto md:h-[110px] rounded-lg overflow-hidden bg-black/60 transition-all duration-300 ${
               (!voice.isActive || voice.isMuted) ? 'brightness-50' : ''
             }`}>
               {voice.isLoading ? (
