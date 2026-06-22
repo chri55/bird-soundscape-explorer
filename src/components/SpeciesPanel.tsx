@@ -49,7 +49,7 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
     <div className="w-full h-full md:w-80 flex flex-col bg-white border-b border-gray-200 md:border-b-0 md:border-l shrink-0 overflow-y-auto md:order-last">
       {isEmpty ? (
         <div className="flex-1 flex items-center justify-center p-6 text-center">
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-500 text-sm">
             Drop a pin on the map to discover birds in this area
           </p>
         </div>
@@ -100,7 +100,7 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
                 </h3>
               </div>
               {filteredNotable.length === 0 ? (
-                <p className="px-4 py-3 text-sm text-gray-400">No matches</p>
+                <p className="px-4 py-3 text-sm text-gray-500">No matches</p>
               ) : (
                 filteredNotable.map(obs => (
                   <SpeciesListRow
@@ -121,7 +121,7 @@ export function SpeciesPanel({ notableObs, recentObs, recordings, isLoading }: S
                 </h3>
               </div>
               {filteredRecent.length === 0 ? (
-                <p className="px-4 py-3 text-sm text-gray-400">No matches</p>
+                <p className="px-4 py-3 text-sm text-gray-500">No matches</p>
               ) : (
                 filteredRecent.map(obs => (
                   <SpeciesListRow
