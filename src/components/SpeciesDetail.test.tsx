@@ -14,6 +14,8 @@ vi.mock('../api/ebird', () => ({
   clearTaxonomyCache: vi.fn(),
 }));
 vi.mock('../api/wikipedia', () => ({ fetchWikiSummary: vi.fn() }));
+vi.mock('../api/xeno-canto', () => ({ fetchRecordings: vi.fn() }));
+import { fetchRecordings } from '../api/xeno-canto';
 
 const obs: EBirdObservation = {
   speciesCode: 'amerob', comName: 'American Robin',
@@ -26,6 +28,9 @@ beforeEach(() => {
   vi.mocked(fetchBirdPhoto).mockResolvedValue(null);
   vi.mocked(fetchTaxonomy).mockResolvedValue([]);
   vi.mocked(fetchWikiSummary).mockResolvedValue(null);
+  vi.mocked(fetchRecordings).mockResolvedValue({
+    numRecordings: '0', numSpecies: '0', page: 1, numPages: 1, recordings: [],
+  });
 });
 
 afterEach(() => {
@@ -146,5 +151,63 @@ describe('SpeciesDetail', () => {
       render(<SpeciesDetail obs={obs} recordings={[]} onBack={vi.fn()} />);
     });
     expect(screen.queryByText('Wikipedia ↗')).toBeNull();
+  });
+
+  it('shows Play call button after loading', async () => {
+    await act(async () => {
+      render(<SpeciesDetail obs={obs} recordings={[]} onBack={vi.fn()} />);
+    });
+    expect(screen.getByRole('button', { name: /play call/i })).toBeInTheDocument();
+  });
+
+  it('shows Loading while fetchRecordings is pending', async () => {
+    vi.mocked(fetchRecordings).mockImplementation(() => new Promise(() => {}));
+    await act(async () => {
+      render(<SpeciesDetail obs={obs} recordings={[]} onBack={vi.fn()} />);
+    });
+    fireEvent.click(screen.getByRole('button', { name: /play call/i }));
+    expect(screen.getByRole('button', { name: /loading/i })).toBeInTheDocument();
+  });
+
+  it('shows No recording when XC returns empty results', async () => {
+    vi.mocked(fetchRecordings).mockResolvedValue({
+      numRecordings: '0', numSpecies: '0', page: 1, numPages: 1, recordings: [],
+    });
+    await act(async () => {
+      render(<SpeciesDetail obs={obs} recordings={[]} onBack={vi.fn()} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /play call/i }));
+    });
+    expect(screen.getByRole('button', { name: /no recording/i })).toBeDisabled();
+  });
+
+  it('shows attribution text when recording is found', async () => {
+    const xcRec = {
+      id: '1', gen: 'Turdus', sp: 'migratorius', en: 'American Robin',
+      rec: 'Jane Smith', cnt: 'US', loc: 'Central Park',
+      lat: '40', lon: '-73', type: 'song', q: 'A',
+      file: 'https://xc.org/1.mp3', date: '2024-01-01',
+      'file-name': '1.mp3', sono: { small: '', med: '' },
+    };
+    vi.mocked(fetchRecordings).mockResolvedValue({
+      numRecordings: '1', numSpecies: '1', page: 1, numPages: 1, recordings: [xcRec],
+    });
+    vi.stubGlobal('Audio', class {
+      src: string;
+      constructor(src: string) { this.src = src; }
+      play = vi.fn().mockResolvedValue(undefined);
+      pause = vi.fn();
+      load = vi.fn();
+      addEventListener = vi.fn();
+    });
+    await act(async () => {
+      render(<SpeciesDetail obs={obs} recordings={[]} onBack={vi.fn()} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /play call/i }));
+    });
+    expect(screen.getByText(/Jane Smith/)).toBeInTheDocument();
+    vi.unstubAllGlobals();
   });
 });
