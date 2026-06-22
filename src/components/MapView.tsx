@@ -137,7 +137,7 @@ export default function MapView() {
         />
 
         <div className="flex-1 relative z-0 min-h-0">
-          <div className="absolute top-3 left-3 z-[1000] w-64">
+          <div className="absolute top-3 left-14 z-[1000] w-64">
             <ParkSearch parks={parks} onSelect={handleParkSearch} />
           </div>
           <MapContainer center={[39.5, -98.35]} zoom={4} className="w-full h-full cursor-crosshair">
