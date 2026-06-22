@@ -26,7 +26,7 @@ VITE_NPS_API_KEY=         # from developer.nps.gov/api/keygen
 
 ## Architecture
 
-**Bird Soundscape Explorer** — click a map pin, hear the birds that live there in that season.
+**Tweetr** — click a map pin, hear the birds that live there in that season.
 
 ### Tech stack
 

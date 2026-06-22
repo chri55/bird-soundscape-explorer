@@ -1,4 +1,4 @@
-# Project Spec: Bird Soundscape Explorer
+# Project Spec: Tweetr
 
 ## Overview
 
