@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faPause, faVolumeXmark, faVolume } from '@fortawesome/free-solid-svg-icons';
 
 export interface SoundscapeControlsProps {
   isPlaying: boolean;
@@ -37,6 +37,7 @@ export function SoundscapeControls({
         </button>
         <button
           type="button"
+          aria-label={allMuted ? 'Unmute' : 'Mute'}
           onClick={onMuteAll}
           className={`w-12 h-7 rounded text-xs transition-colors ${
             allMuted
@@ -44,7 +45,7 @@ export function SoundscapeControls({
               : 'bg-white hover:bg-gray-100 text-gray-900'
           }`}
         >
-          {allMuted ? 'Unmute' : 'Mute'}
+          {allMuted ? <FontAwesomeIcon icon={faVolumeXmark}/> : <FontAwesomeIcon icon={faVolume}/>}
         </button>
       </div>
       <span className="hidden md:inline text-white text-sm">
