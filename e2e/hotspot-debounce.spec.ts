@@ -8,7 +8,7 @@ async function setupWithHotspotCounter(page: Parameters<typeof setMapView>[0]) {
     route.fulfill({ json: { data: [{ parkCode: 'yell', fullName: 'Yellowstone National Park', latitude: '44.42', longitude: '-110.58' }] } }),
   );
   await page.route('/api/ebird/data/obs/geo/recent*', route => route.fulfill({ json: [] }));
-  await page.route('/api/ebird/data/obs/geo/notable*', route => route.fulfill({ json: [] }));
+  await page.route('/api/ebird/data/obs/geo/recent/notable*', route => route.fulfill({ json: [] }));
   await page.route('/api/xc*', route =>
     route.fulfill({ json: { recordings: [], numRecordings: '0', numSpecies: '0', page: 1, numPages: 1 } }),
   );

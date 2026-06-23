@@ -17,7 +17,7 @@ export async function setupMockRoutes(page: Page): Promise<void> {
   await page.route('/api/nps*', route => route.fulfill({ json: NPS_MOCK }));
   await page.route('/api/ebird/ref/hotspot/geo*', route => route.fulfill({ json: HOTSPOT_MOCK }));
   await page.route('/api/ebird/data/obs/geo/recent*', route => route.fulfill({ json: EBIRD_OBS_MOCK }));
-  await page.route('/api/ebird/data/obs/geo/notable*', route => route.fulfill({ json: EBIRD_OBS_MOCK }));
+  await page.route('/api/ebird/data/obs/geo/recent/notable*', route => route.fulfill({ json: EBIRD_OBS_MOCK }));
   await page.route('/api/xc*', route => route.fulfill({ json: XC_MOCK }));
 }
 
