@@ -9,7 +9,7 @@ import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
 import type { LatLng } from '../utils/geo';
 import { haversineKm } from '../utils/geo';
-import type { EBirdObservation } from '../api/ebird';
+import type { EBirdObservation, EBirdHotspot } from '../api/ebird';
 import { fetchRecentNearby, fetchNearbyNotable } from '../api/ebird';
 import type { XCRecording } from '../api/xeno-canto';
 import { fetchRecordingsByBox } from '../api/xeno-canto';
@@ -25,7 +25,8 @@ import { SoundscapeControls } from './SoundscapeControls';
 import { useNpsParks } from '../hooks/useNpsParks';
 import { ParkClusterLayer } from './ParkClusterLayer';
 import { EbirdHotspotLayer } from './EbirdHotspotLayer';
-import { ParkSearch } from './ParkSearch';
+import { PoiSearch } from './PoiSearch';
+import type { SearchItem } from './PoiSearch';
 import { SettingsModal } from './SettingsModal';
 import type { MobileTab } from './MobileTabBar';
 import { MobileTabBar } from './MobileTabBar';
@@ -73,6 +74,7 @@ export default function MapView() {
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [selectedVoice, setSelectedVoice] = useState<SoundscapeVoice | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>('map');
+  const [loadedHotspots, setLoadedHotspots] = useState<EBirdHotspot[]>([]);
   const { exclusions, excludedSciNames, addExclusion, removeExclusion } = useExclusionList();
 
   const lastFetchRef = useRef<LatLng | null>(null);
@@ -84,6 +86,21 @@ export default function MapView() {
   const availableObs = [...notableObs, ...recentObs].filter(
     (obs, i, arr) => arr.findIndex(o => o.sciName === obs.sciName) === i,
   );
+
+  const searchItems: SearchItem[] = [
+    ...parks.map(p => ({
+      name: p.fullName,
+      lat: parseFloat(p.latitude),
+      lng: parseFloat(p.longitude),
+      subtitle: 'U.S. National Park',
+    })),
+    ...loadedHotspots.map(hs => ({
+      name: hs.locName,
+      lat: hs.lat,
+      lng: hs.lng,
+      subtitle: 'Birding Hotspot',
+    })),
+  ];
 
   const fetchForPin = useCallback(async (pos: LatLng) => {
     if (lastFetchRef.current && haversineKm(pos, lastFetchRef.current) < FETCH_RADIUS_KM) return;
@@ -167,7 +184,7 @@ export default function MapView() {
 
         <div className={`${mobileTab === 'map' ? '' : 'hidden md:block'} flex-1 relative z-0 min-h-0`}>
           <div className="absolute top-3 left-1/2 -translate-x-1/2 md:left-14 md:translate-x-0 z-[1000] w-64">
-            <ParkSearch parks={parks} onSelect={handleParkSearch} />
+            <PoiSearch items={searchItems} onSelect={handleParkSearch} />
           </div>
           <MapContainer center={[39.5, -98.35]} zoom={4} className="w-full h-full cursor-crosshair">
             <TileLayer
@@ -178,7 +195,10 @@ export default function MapView() {
             {pin && <Marker position={[pin.lat, pin.lng]} icon={defaultIcon} />}
             <ParkClusterLayer parks={parks} onParkClick={handlePin} />
             <FlyToController target={flyToTarget} />
-            <EbirdHotspotLayer onHotspotClick={handlePin} />
+            <EbirdHotspotLayer
+              onHotspotClick={handlePin}
+              onNewHotspots={hotspots => setLoadedHotspots(prev => [...prev, ...hotspots])}
+            />
           </MapContainer>
         </div>
       </div>
