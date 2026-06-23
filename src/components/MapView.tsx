@@ -134,7 +134,7 @@ export default function MapView() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-dvh">
       <header className="px-4 py-2 bg-green-800 text-white flex items-center gap-3 shrink-0">
         <span className="text-lg font-semibold min-w-0 truncate">Tweetr</span>
         {pin && (
