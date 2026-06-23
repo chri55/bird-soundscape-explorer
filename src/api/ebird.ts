@@ -101,3 +101,26 @@ export async function fetchTaxonomy(speciesCodes: string[]): Promise<EBirdTaxon[
 
   return speciesCodes.map(c => cache.get(c) ?? null).filter((t): t is EBirdTaxon => t !== null);
 }
+
+export interface EBirdHotspot {
+  locId: string;
+  locName: string;
+  countryCode: string;
+  subnational1Code: string;
+  lat: number;
+  lng: number;
+  latestObsDt: string;
+  numSpeciesAllTime: number;
+}
+
+export async function fetchNearbyHotspots(
+  lat: number,
+  lng: number,
+  dist = 75,
+  maxResults = 100,
+): Promise<EBirdHotspot[]> {
+  const url = `${BASE_URL}/ref/hotspot/geo?lat=${lat}&lng=${lng}&dist=${dist}&maxResults=${maxResults}&fmt=json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`eBird error ${res.status}: ${await res.text()}`);
+  return res.json() as Promise<EBirdHotspot[]>;
+}

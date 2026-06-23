@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchNearbyNotable, fetchTaxonomy, clearTaxonomyCache } from './ebird';
-import type { EBirdTaxon } from './ebird';
+import { fetchNearbyNotable, fetchTaxonomy, clearTaxonomyCache, fetchNearbyHotspots } from './ebird';
+import type { EBirdTaxon, EBirdHotspot } from './ebird';
 
 const mockFetch = vi.fn();
 (global as any).fetch = mockFetch;
@@ -133,5 +133,64 @@ describe('fetchTaxonomy', () => {
     const result = await fetchTaxonomy(['unknown']);
     expect(mockFetch).not.toHaveBeenCalled();
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('fetchNearbyHotspots', () => {
+  const mockHotspot: EBirdHotspot = {
+    locId: 'L123456',
+    locName: 'Central Park',
+    countryCode: 'US',
+    subnational1Code: 'US-NY',
+    lat: 40.7829,
+    lng: -73.9654,
+    latestObsDt: '2026-06-20 07:30',
+    numSpeciesAllTime: 312,
+  };
+
+  it('calls the correct URL with default dist and maxResults', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve([mockHotspot]),
+    });
+
+    await fetchNearbyHotspots(40, -74);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/ebird/ref/hotspot/geo?lat=40&lng=-74&dist=75&maxResults=100&fmt=json',
+    );
+  });
+
+  it('returns the parsed hotspot array', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve([mockHotspot]),
+    });
+
+    const result = await fetchNearbyHotspots(40, -74);
+    expect(result).toEqual([mockHotspot]);
+  });
+
+  it('respects custom dist and maxResults', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve([]),
+    });
+
+    await fetchNearbyHotspots(51, 0, 50, 50);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/ebird/ref/hotspot/geo?lat=51&lng=0&dist=50&maxResults=50&fmt=json',
+    );
+  });
+
+  it('throws on non-ok response', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      text: () => Promise.resolve('rate limited'),
+    });
+
+    await expect(fetchNearbyHotspots(40, -74)).rejects.toThrow('eBird error 429');
   });
 });
