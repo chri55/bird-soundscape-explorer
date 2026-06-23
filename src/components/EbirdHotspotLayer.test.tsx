@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act } from '@testing-library/react';
 import { useMapEvents } from 'react-leaflet';
 import { EbirdHotspotLayer } from './EbirdHotspotLayer';
@@ -100,6 +100,34 @@ describe('EbirdHotspotLayer', () => {
 
     expect(mockRemoveLayers).toHaveBeenCalled();
 
+    vi.useRealTimers();
+  });
+
+  it('calls onNewHotspots with the newly added hotspot objects', async () => {
+    vi.useFakeTimers();
+    const hotspot = {
+      locId: 'L12345',
+      locName: 'Central Park',
+      countryCode: 'US',
+      lat: 40.78,
+      lng: -73.97,
+      numSpeciesAllTime: 200,
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([hotspot]),
+    }));
+    const onNewHotspots = vi.fn();
+
+    render(
+      <EbirdHotspotLayer onHotspotClick={vi.fn()} onNewHotspots={onNewHotspots} />,
+    );
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(onNewHotspots).toHaveBeenCalledWith([hotspot]);
     vi.useRealTimers();
   });
 });

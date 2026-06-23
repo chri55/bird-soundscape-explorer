@@ -15,9 +15,10 @@ const MAX_CELLS = 30;
 
 interface EbirdHotspotLayerProps {
   onHotspotClick: (pos: LatLng) => void;
+  onNewHotspots?: (hotspots: EBirdHotspot[]) => void;
 }
 
-export function EbirdHotspotLayer({ onHotspotClick }: EbirdHotspotLayerProps) {
+export function EbirdHotspotLayer({ onHotspotClick, onNewHotspots }: EbirdHotspotLayerProps) {
   const map = useMap();
 
   // All mutable state lives in refs — no re-renders needed since output is pure Leaflet
@@ -33,6 +34,11 @@ export function EbirdHotspotLayer({ onHotspotClick }: EbirdHotspotLayerProps) {
   const onHotspotClickRef = useRef(onHotspotClick);
   useLayoutEffect(() => {
     onHotspotClickRef.current = onHotspotClick;
+  });
+
+  const onNewHotspotsRef = useRef(onNewHotspots);
+  useLayoutEffect(() => {
+    onNewHotspotsRef.current = onNewHotspots;
   });
 
   // Create the cluster group once and add it to the map
@@ -84,6 +90,8 @@ export function EbirdHotspotLayer({ onHotspotClick }: EbirdHotspotLayerProps) {
     if (newMarkers.length > 0) {
       clusterGroup.addLayers(newMarkers);
       cellMarkers.current.set(key, { markers: newMarkers, locIds: newLocIds });
+      const addedHotspots = hotspots.filter(hs => newLocIds.includes(hs.locId));
+      onNewHotspotsRef.current?.(addedHotspots);
     }
   };
 
