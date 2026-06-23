@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useMap, useMapEvents } from 'react-leaflet';
-import * as L from 'leaflet';
+import L from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import type { EBirdHotspot } from '../api/ebird';

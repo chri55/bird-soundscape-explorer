@@ -34,3 +34,5 @@ deno.lock
 
 # Local Netlify folder
 .netlify
+
+playwright-report/

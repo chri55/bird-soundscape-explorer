@@ -25,15 +25,18 @@ vi.mock('react-leaflet', () => ({
   useMapEvents: vi.fn(),
 }));
 
-vi.mock('leaflet', () => ({
-  default: {},
-  markerClusterGroup: vi.fn(() => mockClusterGroup),
-  marker: vi.fn(() => ({
+vi.mock('leaflet', () => {
+  const mockMarker = () => ({
     bindTooltip: vi.fn().mockReturnThis(),
     on: vi.fn().mockReturnThis(),
-  })),
-  divIcon: vi.fn(() => ({})),
-}));
+  });
+  const leaflet = {
+    markerClusterGroup: vi.fn(() => mockClusterGroup),
+    marker: vi.fn(mockMarker),
+    divIcon: vi.fn(() => ({})),
+  };
+  return { default: leaflet, ...leaflet };
+});
 
 vi.mock('leaflet.markercluster', () => ({}));
 vi.mock('leaflet.markercluster/dist/MarkerCluster.css', () => ({}));
