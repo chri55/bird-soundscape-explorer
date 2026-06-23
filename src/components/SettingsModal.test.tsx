@@ -107,6 +107,23 @@ describe('SettingsModal', () => {
     expect(screen.getByText('iNaturalist')).toBeInTheDocument();
   });
 
+  it('source names in About section are links that open in a new tab', () => {
+    render(<SettingsModal {...baseProps} />);
+    const sources: [string, string][] = [
+      ['eBird', 'https://ebird.org'],
+      ['Xeno-canto', 'https://xeno-canto.org'],
+      ['iNaturalist', 'https://www.inaturalist.org'],
+      ['National Park Service', 'https://www.nps.gov'],
+      ['OpenStreetMap', 'https://www.openstreetmap.org'],
+    ];
+    for (const [name, href] of sources) {
+      const link = screen.getByRole('link', { name });
+      expect(link).toHaveAttribute('href', href);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    }
+  });
+
   it('modal inner div has h-full class for mobile full-screen', () => {
     const { container } = render(<SettingsModal {...baseProps} />);
     const modal = container.querySelector('.bg-gray-900');

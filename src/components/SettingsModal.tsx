@@ -146,23 +146,38 @@ export function SettingsModal({
             <h3 className="text-white font-medium mb-2">About</h3>
             <dl className="space-y-1 text-sm text-gray-400">
               <div>
-                <dt className="inline font-medium text-gray-300">eBird</dt>
+                <dt className="inline">
+                  <a href="https://ebird.org" target="_blank" rel="noopener noreferrer"
+                     className="font-medium text-gray-300 hover:underline">eBird</a>
+                </dt>
                 <dd className="inline"> (Cornell Lab of Ornithology) — Recent bird sighting data</dd>
               </div>
               <div>
-                <dt className="inline font-medium text-gray-300">Xeno-canto</dt>
+                <dt className="inline">
+                  <a href="https://xeno-canto.org" target="_blank" rel="noopener noreferrer"
+                     className="font-medium text-gray-300 hover:underline">Xeno-canto</a>
+                </dt>
                 <dd className="inline"> — Bird audio recordings</dd>
               </div>
               <div>
-                <dt className="inline font-medium text-gray-300">iNaturalist</dt>
+                <dt className="inline">
+                  <a href="https://www.inaturalist.org" target="_blank" rel="noopener noreferrer"
+                     className="font-medium text-gray-300 hover:underline">iNaturalist</a>
+                </dt>
                 <dd className="inline"> — Bird photos</dd>
               </div>
               <div>
-                <dt className="inline font-medium text-gray-300">National Park Service</dt>
+                <dt className="inline">
+                  <a href="https://www.nps.gov" target="_blank" rel="noopener noreferrer"
+                     className="font-medium text-gray-300 hover:underline">National Park Service</a>
+                </dt>
                 <dd className="inline"> — Park locations</dd>
               </div>
               <div>
-                <dt className="inline font-medium text-gray-300">OpenStreetMap</dt>
+                <dt className="inline">
+                  <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer"
+                     className="font-medium text-gray-300 hover:underline">OpenStreetMap</a>
+                </dt>
                 <dd className="inline"> — Map tiles</dd>
               </div>
             </dl>
