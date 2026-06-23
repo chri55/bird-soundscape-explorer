@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import MapView from './MapView';
 import { fetchNearbyNotable, fetchRecentNearby } from '../api/ebird';
 import { fetchRecordingsByBox } from '../api/xeno-canto';
@@ -84,5 +84,13 @@ describe('MapView geo-cache', () => {
     simulateMapClick(37.77 + 0.5, -122.4);
     await vi.runAllTimersAsync();
     expect(fetchNearbyNotable).toHaveBeenCalled();
+  });
+
+  it('shows loading skeleton while fetch is in flight', async () => {
+    vi.mocked(fetchNearbyNotable).mockReturnValueOnce(new Promise(() => {}));
+    render(<MapView />);
+    simulateMapClick(37.77, -122.4);
+    await vi.advanceTimersByTimeAsync(500);
+    expect(screen.getByRole('status', { name: 'Loading birds' })).toBeInTheDocument();
   });
 });

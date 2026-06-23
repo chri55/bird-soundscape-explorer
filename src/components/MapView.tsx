@@ -180,51 +180,69 @@ export default function MapView() {
         </div>
       </div>
 
-      {soundscape.voices.length > 0 && (
+      {(isLoading || soundscape.voices.length > 0) && (
         <>
-          {selectedVoice && mobileTab === 'map' && (
-            <div className="md:hidden shrink-0 bg-gray-800 flex gap-3 px-3 py-2 items-center">
-              <div className="w-16 h-16 rounded overflow-hidden shrink-0 bg-gray-700 flex items-center justify-center">
-                {selectedVoice.photo ? (
-                  <img
-                    src={selectedVoice.photo.photoUrl}
-                    alt={selectedVoice.recording.en}
-                    className="w-full h-full object-cover"
+          {isLoading && soundscape.voices.length === 0 ? (
+            <div
+              role="status"
+              aria-label="Loading birds"
+              className={`shrink-0 bg-gray-900 items-center gap-3 px-3 py-2 ${
+                mobileTab !== 'map' ? 'hidden md:flex' : 'flex'
+              }`}
+            >
+              <div className="w-12 h-14 rounded bg-gray-700 animate-pulse shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-gray-700 rounded animate-pulse w-32" />
+                <div className="h-3 bg-gray-700 rounded animate-pulse w-24" />
+              </div>
+            </div>
+          ) : (
+            <>
+              {selectedVoice && mobileTab === 'map' && (
+                <div className="md:hidden shrink-0 bg-gray-800 flex gap-3 px-3 py-2 items-center">
+                  <div className="w-16 h-16 rounded overflow-hidden shrink-0 bg-gray-700 flex items-center justify-center">
+                    {selectedVoice.photo ? (
+                      <img
+                        src={selectedVoice.photo.photoUrl}
+                        alt={selectedVoice.recording.en}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <p className="text-white text-xs text-center px-1">{selectedVoice.recording.en}</p>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white text-sm font-semibold truncate">{selectedVoice.recording.en}</p>
+                    <p className="text-gray-400 text-xs italic truncate">{selectedVoice.sciName}</p>
+                    {selectedVoice.photo && (
+                      <p className="text-gray-500 text-xs truncate">{selectedVoice.photo.attribution}</p>
+                    )}
+                    <p className="text-gray-500 text-xs truncate">Rec: {selectedVoice.recording.rec}</p>
+                  </div>
+                </div>
+              )}
+              <div className={`shrink-0 bg-gray-900 items-center gap-2 px-3 py-2 relative z-10 ${
+                mobileTab !== 'map' ? 'hidden md:flex' : 'flex'
+              }`}>
+                <SoundscapeControls
+                  isPlaying={soundscape.isPlaying}
+                  voiceCount={soundscape.voices.length}
+                  loadedCount={soundscape.loadedCount}
+                  allMuted={soundscape.allMuted}
+                  onToggle={soundscape.toggle}
+                  onMuteAll={soundscape.muteAll}
+                />
+                <div className="flex-1 min-w-0 relative z-10">
+                  <SoundscapeGrid
+                    voices={soundscape.voices}
+                    onToggleMute={soundscape.toggleMute}
+                    onReroll={soundscape.rerollVoice}
+                    onSelectedVoiceChange={setSelectedVoice}
                   />
-                ) : (
-                  <p className="text-white text-xs text-center px-1">{selectedVoice.recording.en}</p>
-                )}
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-white text-sm font-semibold truncate">{selectedVoice.recording.en}</p>
-                <p className="text-gray-400 text-xs italic truncate">{selectedVoice.sciName}</p>
-                {selectedVoice.photo && (
-                  <p className="text-gray-500 text-xs truncate">{selectedVoice.photo.attribution}</p>
-                )}
-                <p className="text-gray-500 text-xs truncate">Rec: {selectedVoice.recording.rec}</p>
-              </div>
-            </div>
+            </>
           )}
-          <div className={`shrink-0 bg-gray-900 items-center gap-2 px-3 py-2 relative z-10 ${
-            mobileTab !== 'map' ? 'hidden md:flex' : 'flex'
-          }`}>
-            <SoundscapeControls
-              isPlaying={soundscape.isPlaying}
-              voiceCount={soundscape.voices.length}
-              loadedCount={soundscape.loadedCount}
-              allMuted={soundscape.allMuted}
-              onToggle={soundscape.toggle}
-              onMuteAll={soundscape.muteAll}
-            />
-            <div className="flex-1 min-w-0 relative z-10">
-              <SoundscapeGrid
-                voices={soundscape.voices}
-                onToggleMute={soundscape.toggleMute}
-                onReroll={soundscape.rerollVoice}
-                onSelectedVoiceChange={setSelectedVoice}
-              />
-            </div>
-          </div>
         </>
       )}
       <MobileTabBar activeTab={mobileTab} onTabChange={setMobileTab} />
