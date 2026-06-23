@@ -750,4 +750,48 @@ describe('rerollVoice', () => {
 
     expect(vi.mocked(fetchRecordings)).not.toHaveBeenCalledWith('gen:Parus sp:major');
   });
+
+  it('concurrent rerolls on different slots do not produce duplicate sciNames', async () => {
+    const xcRec_C = makeRec({ gen: 'Erithacus', sp: 'rubecula', id: '3', en: 'European Robin' });
+    const xcRec_D = makeRec({ gen: 'Cyanistes', sp: 'caeruleus', id: '4', en: 'Blue Tit' });
+    const obsC = makeObs('Erithacus rubecula', 3);
+    const obsD = makeObs('Cyanistes caeruleus', 2);
+
+    vi.mocked(fetchRecordings).mockImplementation((query: string) =>
+      Promise.resolve({
+        numRecordings: '1', numSpecies: '1', page: 1, numPages: 1,
+        recordings: query.includes('Erithacus') ? [xcRec_C]
+                 : query.includes('Cyanistes') ? [xcRec_D]
+                 : [],
+      }),
+    );
+
+    // 2 XC recordings → 2 initial voices (slots 0=Turdus, 1=Parus)
+    // obsC and obsD are candidates for reroll (no recordings, not in slots)
+    const { result } = renderHook(() =>
+      useSoundscape([xcRec1, xcRec2], [obs1, obs2, obsC, obsD]),
+    );
+    await act(async () => { await vi.runAllTimersAsync(); });
+    expect(result.current.voices).toHaveLength(2);
+
+    // Trigger both rerolls in the same synchronous tick — no await between them
+    await act(async () => {
+      result.current.rerollVoice(0);
+      result.current.rerollVoice(1);
+      await vi.runAllTimersAsync();
+    });
+
+    // Emit canplay on the two new Audio instances (indices 2 and 3; 0 and 1 are initial)
+    act(() => {
+      audioInstances[2]!.emit('canplay');
+      audioInstances[3]!.emit('canplay');
+    });
+    await act(async () => { await vi.runAllTimersAsync(); });
+
+    const sciNames = result.current.voices.map(v => v.sciName);
+    expect(sciNames[0]).not.toBe(sciNames[1]);
+    expect(new Set(sciNames).size).toBe(2);
+    expect(['Erithacus rubecula', 'Cyanistes caeruleus']).toContain(sciNames[0]);
+    expect(['Erithacus rubecula', 'Cyanistes caeruleus']).toContain(sciNames[1]);
+  });
 });

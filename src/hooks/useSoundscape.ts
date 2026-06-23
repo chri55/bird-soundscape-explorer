@@ -20,6 +20,8 @@ export const SPARE_VOICES = 4;
 export const MAX_AUDIO_RETRIES = 2;
 export const RETRY_DELAY_MS = 1_000;
 export const MAX_REROLL_ATTEMPTS = 5;
+export const POLL_INTERVAL_MS = 150;
+export const MAX_POLL_TICKS = 10;
 
 export interface SoundscapeVoice {
   recording: XCRecording;
@@ -117,6 +119,7 @@ export function useSoundscape(
   const voicesRef     = useRef<SoundscapeVoice[]>([]);
   const rerollSeqRef  = useRef<number[]>([]);
   const excludedSciNamesRef = useRef<Set<string>>(excludedSciNames);
+  const inFlightSciNamesRef = useRef(new Set<string>());
 
   const stopAll = useCallback(() => {
     timersRef.current.forEach(t => clearTimeout(t));
@@ -408,68 +411,109 @@ export function useSoundscape(
     const mySeq = rerollSeqRef.current[index];
 
     void (async () => {
-      for (const candidate of candidates.slice(0, MAX_REROLL_ATTEMPTS)) {
-        const parts = candidate.sciName.trim().split(/\s+/);
-        if (parts.length < 2 || !/^[A-Za-z]+$/.test(parts[1]!)) continue;
-        const [genus, species] = parts;
-        try {
-          const response = await fetchRecordings(`gen:${genus} sp:${species}`);
-          if (rerollSeqRef.current[index] !== mySeq) return;
-          const best = bestRecording(candidate.sciName, response.recordings);
-          if (best) {
-            const newAudio = new Audio(best.file);
-            audioRefs.current[index]      = newAudio;
-            retryCountsRef.current[index] = 0;
-            intervalsRef.current[index]   = MAX_INTERVAL_MS;
+      let pollTick = 0;
 
-            // Fetch photo and wait for audio canplay in parallel — both must
-            // complete before we swap the card so there's no layout shift
-            const [audioReady, photo] = await Promise.all([
-              new Promise<boolean>(resolve => {
-                newAudio.addEventListener('canplay', () => resolve(true), { once: true } as AddEventListenerOptions);
-                newAudio.addEventListener('error',   () => resolve(false), { once: true } as AddEventListenerOptions);
-              }),
-              fetchBirdPhoto(candidate.sciName).catch(() => null),
-            ]);
+      while (true) {
+        if (rerollSeqRef.current[index] !== mySeq) return;
 
+        // Rebuild candidate list on each iteration (poll turns may see freed slots)
+        const freshActive = new Set(voicesRef.current.map(v => v.sciName));
+        const blocklist = readBlocklist();
+        const seen = new Set<string>();
+        const allObs = [...notableObsRef.current, ...recentObsRef.current];
+        const freshCandidates: EBirdObservation[] = [];
+        for (const obs of allObs) {
+          if (!seen.has(obs.sciName) && !freshActive.has(obs.sciName) &&
+              !blocklist.has(obs.sciName) && !excludedSciNamesRef.current.has(obs.sciName)) {
+            seen.add(obs.sciName);
+            freshCandidates.push(obs);
+          }
+        }
+        freshCandidates.sort((a, b) => (b.howMany ?? 0) - (a.howMany ?? 0));
+
+        let anyAttempted = false;
+        for (const candidate of freshCandidates.slice(0, MAX_REROLL_ATTEMPTS)) {
+          const parts = candidate.sciName.trim().split(/\s+/);
+          if (parts.length < 2 || !/^[A-Za-z]+$/.test(parts[1]!)) continue;
+          if (inFlightSciNamesRef.current.has(candidate.sciName)) continue;
+
+          anyAttempted = true;
+          inFlightSciNamesRef.current.add(candidate.sciName);
+          const [genus, species] = parts;
+
+          try {
+            const response = await fetchRecordings(`gen:${genus} sp:${species}`);
             if (rerollSeqRef.current[index] !== mySeq) {
-              newAudio.pause(); newAudio.src = ''; newAudio.load();
+              inFlightSciNamesRef.current.delete(candidate.sciName);
               return;
             }
+            const best = bestRecording(candidate.sciName, response.recordings);
+            if (best) {
+              const newAudio = new Audio(best.file);
+              audioRefs.current[index]      = newAudio;
+              retryCountsRef.current[index] = 0;
+              intervalsRef.current[index]   = MAX_INTERVAL_MS;
 
-            if (!audioReady) {
-              // Audio failed — try next candidate
-              newAudio.src = ''; newAudio.load();
+              const [audioReady, photo] = await Promise.all([
+                new Promise<boolean>(resolve => {
+                  newAudio.addEventListener('canplay', () => resolve(true), { once: true } as AddEventListenerOptions);
+                  newAudio.addEventListener('error',   () => resolve(false), { once: true } as AddEventListenerOptions);
+                }),
+                fetchBirdPhoto(candidate.sciName).catch(() => null),
+              ]);
+
+              if (rerollSeqRef.current[index] !== mySeq) {
+                inFlightSciNamesRef.current.delete(candidate.sciName);
+                newAudio.pause(); newAudio.src = ''; newAudio.load();
+                return;
+              }
+
+              if (!audioReady) {
+                inFlightSciNamesRef.current.delete(candidate.sciName);
+                newAudio.src = ''; newAudio.load();
+                addToBlocklist(candidate.sciName);
+                continue;
+              }
+
+              inFlightSciNamesRef.current.delete(candidate.sciName);
+              setVoices(v => {
+                const newVoices = v.map((voice, i) => i === index ? {
+                  recording:   best,
+                  sciName:     candidate.sciName,
+                  howMany:     candidate.howMany ?? 1,
+                  intervalMs:  MAX_INTERVAL_MS,
+                  isActive:    false,
+                  isLoading:   false,
+                  isFailed:    false,
+                  isMuted:     false,
+                  isRerolling: false,
+                  photo:       photo ?? null,
+                } : voice);
+                voicesRef.current = newVoices;
+                return newVoices;
+              });
+              if (isPlayingRef.current && !isMutedRef.current[index]) startVoice(index);
+              return;
+            } else {
+              inFlightSciNamesRef.current.delete(candidate.sciName);
               addToBlocklist(candidate.sciName);
-              continue;
             }
-
-            // Atomic swap: old card content replaced in a single render
-            setVoices(v => {
-              const newVoices = v.map((voice, i) => i === index ? {
-                recording:  best,
-                sciName:    candidate.sciName,
-                howMany:    candidate.howMany ?? 1,
-                intervalMs: MAX_INTERVAL_MS,
-                isActive:   false,
-                isLoading:  false,
-                isFailed:   false,
-                isMuted:    false,
-                isRerolling: false,
-                photo:      photo ?? null,
-              } : voice);
-              voicesRef.current = newVoices;
-              return newVoices;
-            });
-            if (isPlayingRef.current && !isMutedRef.current[index]) startVoice(index);
-            return;
-          } else {
-            addToBlocklist(candidate.sciName);
+          } catch {
+            inFlightSciNamesRef.current.delete(candidate.sciName);
+            // Network error — skip this candidate without blocklisting it
           }
-        } catch {
-          // Network error — skip this candidate without blocklisting it
+        }
+
+        if (!anyAttempted) {
+          // All candidates are claimed by concurrent rerolls — poll and retry
+          if (++pollTick > MAX_POLL_TICKS) break;
+          await new Promise<void>(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+        } else {
+          // Tried all available (non-in-flight) candidates; all failed
+          break;
         }
       }
+
       // All attempts exhausted
       if (rerollSeqRef.current[index] !== mySeq) return;
       setVoices(v => v.map((voice, i) =>
