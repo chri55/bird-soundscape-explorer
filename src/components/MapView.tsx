@@ -136,6 +136,7 @@ export default function MapView() {
   return (
     <div className="flex flex-col h-dvh">
       <header className="px-4 py-2 bg-green-800 text-white flex items-center gap-3 shrink-0">
+        <img src="/favicon.png" alt="" className="w-6 h-6 shrink-0" aria-hidden="true" />
         <span className="text-lg font-semibold min-w-0 truncate">Tweetr</span>
         {pin && (
           <span className="text-sm text-green-200 ml-auto whitespace-nowrap shrink-0">
