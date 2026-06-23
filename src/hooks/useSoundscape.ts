@@ -391,22 +391,6 @@ export function useSoundscape(
       return newVoices;
     });
 
-    // Build candidate list — union of notableObs + recentObs, deduped, excluding
-    // all currently-occupied slots (including the one being rerolled, so the same
-    // bird isn't immediately re-selected) and species in the 24h XC blocklist
-    const activeSciNames = new Set(voicesRef.current.map(v => v.sciName));
-    const blocklist = readBlocklist();
-    const seen = new Set<string>();
-    const allObs = [...notableObsRef.current, ...recentObsRef.current];
-    const candidates: EBirdObservation[] = [];
-    for (const obs of allObs) {
-      if (!seen.has(obs.sciName) && !activeSciNames.has(obs.sciName) && !blocklist.has(obs.sciName) && !excludedSciNamesRef.current.has(obs.sciName)) {
-        seen.add(obs.sciName);
-        candidates.push(obs);
-      }
-    }
-    candidates.sort((a, b) => (b.howMany ?? 0) - (a.howMany ?? 0));
-
     rerollSeqRef.current[index] = (rerollSeqRef.current[index] ?? 0) + 1;
     const mySeq = rerollSeqRef.current[index];
 
@@ -432,9 +416,11 @@ export function useSoundscape(
         freshCandidates.sort((a, b) => (b.howMany ?? 0) - (a.howMany ?? 0));
 
         let anyAttempted = false;
+        let anyEligible = false;
         for (const candidate of freshCandidates.slice(0, MAX_REROLL_ATTEMPTS)) {
           const parts = candidate.sciName.trim().split(/\s+/);
           if (parts.length < 2 || !/^[A-Za-z]+$/.test(parts[1]!)) continue;
+          anyEligible = true;
           if (inFlightSciNamesRef.current.has(candidate.sciName)) continue;
 
           anyAttempted = true;
@@ -505,6 +491,7 @@ export function useSoundscape(
         }
 
         if (!anyAttempted) {
+          if (!anyEligible) break;
           // All candidates are claimed by concurrent rerolls — poll and retry
           if (++pollTick > MAX_POLL_TICKS) break;
           await new Promise<void>(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
