@@ -6,6 +6,7 @@ import { fetchRecordingsByBox } from '../api/xeno-canto';
 vi.mock('../api/ebird', () => ({
   fetchNearbyNotable: vi.fn().mockResolvedValue([]),
   fetchRecentNearby: vi.fn().mockResolvedValue([]),
+  fetchNearbyHotspots: vi.fn().mockResolvedValue([]),
   fetchTaxonomy: vi.fn().mockResolvedValue([]),
   clearTaxonomyCache: vi.fn(),
 }));
@@ -20,8 +21,11 @@ vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="map">{children}</div>,
   TileLayer: () => null,
   Marker: () => null,
-  useMapEvents: (handlers: { click?: (e: unknown) => void }) => { (globalThis as Record<string, unknown>)._mapClick = handlers.click; return null; },
-  useMap: vi.fn(() => ({ addLayer: vi.fn(), removeLayer: vi.fn(), flyTo: vi.fn() })),
+  useMapEvents: (handlers: { click?: (e: unknown) => void }) => {
+    if (handlers.click) (globalThis as Record<string, unknown>)._mapClick = handlers.click;
+    return null;
+  },
+  useMap: vi.fn(() => ({ addLayer: vi.fn(), removeLayer: vi.fn(), flyTo: vi.fn(), getZoom: vi.fn(() => 10), getCenter: vi.fn(() => ({ lat: 37.77, lng: -122.4 })), on: vi.fn(), off: vi.fn() })),
 }));
 
 vi.mock('leaflet.markercluster', () => ({}));
@@ -31,9 +35,11 @@ vi.mock('leaflet', async (importOriginal) => {
   const mockClusterGroup = {
     addLayers: vi.fn(),
     addTo: vi.fn(),
+    removeFrom: vi.fn(),
   };
   return {
     ...actual,
+    markerClusterGroup: vi.fn(() => mockClusterGroup),
     default: {
       ...actual.default,
       markerClusterGroup: vi.fn(() => mockClusterGroup),

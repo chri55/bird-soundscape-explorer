@@ -24,6 +24,7 @@ import { SoundscapeGrid } from './SoundscapeGrid';
 import { SoundscapeControls } from './SoundscapeControls';
 import { useNpsParks } from '../hooks/useNpsParks';
 import { ParkClusterLayer } from './ParkClusterLayer';
+import { EbirdHotspotLayer } from './EbirdHotspotLayer';
 import { ParkSearch } from './ParkSearch';
 import { SettingsModal } from './SettingsModal';
 import type { MobileTab } from './MobileTabBar';
@@ -177,6 +178,7 @@ export default function MapView() {
             {pin && <Marker position={[pin.lat, pin.lng]} icon={defaultIcon} />}
             <ParkClusterLayer parks={parks} onParkClick={handlePin} />
             <FlyToController target={flyToTarget} />
+            <EbirdHotspotLayer onHotspotClick={handlePin} />
           </MapContainer>
         </div>
       </div>
