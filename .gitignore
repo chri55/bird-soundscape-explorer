@@ -28,3 +28,8 @@ dist-ssr
 .superpowers/
 .vite/
 .claude/settings.local.json
+
+deno.lock
+
+# Local Netlify folder
+.netlify
