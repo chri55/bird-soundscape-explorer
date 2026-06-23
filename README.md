@@ -1,73 +1,19 @@
-# React + TypeScript + Vite
+# Tweetr - Bird Soundscape Explorer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+![Tweetr main view](src/assets/tweetr-main.png)
 
-Currently, two official plugins are available:
+This tool aims to be a fun way to explore areas where birds have been seen and trakced across the US and Canada.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Featuring data from eBird, Xeno-Canto, iNaturalist, Wikipedia, and the National Park System, users can drop a pin anywhere in the US, and get interesting data about birds in that area. Data available is mostly limited to eBird's system, hence why there is not much on other contintents for now.
 
-## React Compiler
+The national parks markers are not required to use, and simply represent "hotspots" where users have tracked and sighted lots of different birds. Try clicking the national park closest to you, and see which birds have been sighted there.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Once loaded, up to eight birds will start to play their cries. They can be muted individually, to help identify specific cries. If more than 8 birds were available, then birds can be rotated out using the dice button, to introduce new species into the mix.
 
-## Expanding the ESLint configuration
+![Loading a park](src/assets/loading-a-park.gif)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+The panel along the right side shows "notable" (more rare) and most common bird sightings, along with the date(s) they were sighted, and approximate location. Clicking a bird reveals more information, and links their page on Wikipedia and eBird's website. You can also listen to a call directly from Xeno-Canto if one is available.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+![Details pane](src/assets/details-pane.gif)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+In the settings pane, you can exclude birds from showing up in the recordings. This is limited to loaded birds, so searching for a certain type may not show up if it is not currently loaded by an API.
