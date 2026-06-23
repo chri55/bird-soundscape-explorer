@@ -26,11 +26,10 @@ export async function waitForMapReady(page: Page): Promise<void> {
 }
 
 export async function setMapView(page: Page, lat: number, lng: number, zoom = 8): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await page.waitForFunction(() => !!(window as any).__leafletMap);
   await page.evaluate(({ lat, lng, zoom }) => {
-    type MapContainer = HTMLElement & {
-      _leaflet_map: { setView(latlng: [number, number], zoom: number): void };
-    };
-    (document.querySelector('.leaflet-container') as MapContainer)
-      ._leaflet_map.setView([lat, lng], zoom);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__leafletMap.setView([lat, lng], zoom);
   }, { lat, lng, zoom });
 }

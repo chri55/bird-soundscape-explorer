@@ -63,6 +63,17 @@ function FlyToController({ target }: { target: LatLng | null }) {
   return null;
 }
 
+function MapExposer() {
+  const map = useMap();
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__leafletMap = map;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return () => { (window as any).__leafletMap = undefined; };
+  }, [map]);
+  return null;
+}
+
 export default function MapView() {
   const [pin, setPin] = useState<LatLng | null>(null);
   const [notableObs, setNotableObs] = useState<EBirdObservation[]>([]);
@@ -199,6 +210,7 @@ export default function MapView() {
               onHotspotClick={handlePin}
               onNewHotspots={hotspots => setLoadedHotspots(prev => [...prev, ...hotspots])}
             />
+            <MapExposer />
           </MapContainer>
         </div>
       </div>
