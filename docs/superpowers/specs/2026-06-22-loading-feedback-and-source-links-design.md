@@ -21,10 +21,12 @@ The bar renders whenever `isLoading || soundscape.voices.length > 0`. While `isL
 
 ### Loading skeleton
 
-A single strip inside the bar area (`bg-gray-900`, same background as the normal bar), containing:
+A single strip using the same outer wrapper class as the normal soundscape bar, so it is visible on mobile (map tab) and desktop, and hidden on mobile when the user is on the list tab:
 
-```
-<div className="shrink-0 bg-gray-900 flex items-center gap-3 px-3 py-2">
+```tsx
+<div className={`shrink-0 bg-gray-900 items-center gap-3 px-3 py-2 ${
+  mobileTab !== 'map' ? 'hidden md:flex' : 'flex'
+}`}>
   <div className="w-12 h-14 rounded bg-gray-700 animate-pulse shrink-0" />
   <div className="flex-1 space-y-2">
     <div className="h-3 bg-gray-700 rounded animate-pulse w-32" />
@@ -33,7 +35,7 @@ A single strip inside the bar area (`bg-gray-900`, same background as the normal
 </div>
 ```
 
-On mobile, the skeleton is hidden when `mobileTab !== 'map'` (same visibility rule as the normal bar).
+The `mobileTab !== 'map' ? 'hidden md:flex' : 'flex'` class is identical to the wrapper class on the existing soundscape controls bar — the skeleton is visible on mobile only when the map tab is active.
 
 ### Files changed
 
