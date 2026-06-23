@@ -36,3 +36,4 @@ deno.lock
 .netlify
 
 playwright-report/
+test-results/
