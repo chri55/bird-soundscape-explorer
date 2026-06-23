@@ -104,14 +104,16 @@ export function EbirdHotspotLayer({ onHotspotClick }: EbirdHotspotLayerProps) {
     const key = cellKey(lat, lng);
     if (fetchedCells.current.has(key)) return;
 
-    fetchedCells.current.add(key);
-    cellOrder.current.push(key);
-
-    if (cellOrder.current.length > MAX_CELLS) evictOldestCell();
+    fetchedCells.current.add(key); // guard against duplicate in-flight fetches
 
     try {
       const results = await fetchNearbyHotspots(snapToGrid(lat), snapToGrid(lng));
       addToCluster(results, key);
+      // Only count the cell toward the cap after markers are confirmed in cellMarkers
+      if (cellMarkers.current.has(key)) {
+        cellOrder.current.push(key);
+        if (cellOrder.current.length > MAX_CELLS) evictOldestCell();
+      }
     } catch {
       // hotspot layer is non-critical; silently skip on error
     }

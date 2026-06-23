@@ -106,10 +106,10 @@ export interface EBirdHotspot {
   locId: string;
   locName: string;
   countryCode: string;
-  subnational1Code: string;
+  subnational1Code?: string;
   lat: number;
   lng: number;
-  latestObsDt: string;
+  latestObsDt?: string;
   numSpeciesAllTime: number;
 }
 
