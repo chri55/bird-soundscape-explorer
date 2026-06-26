@@ -184,7 +184,7 @@ export default function MapView() {
       </header>
 
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-        <div className={`${mobileTab === 'list' ? 'flex flex-col flex-1' : 'hidden'} md:contents`}>
+        <div className={`${mobileTab === 'list' ? 'flex flex-col flex-1 min-h-0' : 'hidden'} md:contents`}>
           <SpeciesPanel
             notableObs={notableObs}
             recentObs={recentObs}
